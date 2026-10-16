@@ -13,15 +13,16 @@ const {
     nomeDoContato
 } = require('../utils/identidade');
 
-const { celebrarMeta } = require('../utils/efeitos');
+const { textoRestam } = require('../utils/formatacao');
+const { anunciarMeta } = require('../utils/efeitos');
 
 
-// !add Nome          -> vaga sem dono (a pessoa pode usar !eusou depois)
-// !add @pessoa       -> vaga já vinculada, usa o nome do perfil
+// !add Nome          -> vaga criada pelo ADM (só um ADM remove)
+// !add @pessoa       -> vaga vinculada à pessoa, usa o nome do perfil
 // !add @pessoa Nome  -> vaga vinculada com o nome escolhido
 module.exports = async function add(ctx) {
 
-    const { evento, client } = ctx;
+    const { lista, client } = ctx;
 
     const [mencionado] = idsMencionados(ctx.msg);
 
@@ -29,13 +30,13 @@ module.exports = async function add(ctx) {
 
     if (mencionado) {
 
-        const jaNaLista = encontrarJogador(evento, ids);
+        const jaNaLista = encontrarJogador(lista, ids);
 
         if (jaNaLista) {
 
             return ctx.responder(
                 `❌ Essa pessoa já está na lista como *${jaNaLista.jogador.nome}* ` +
-                `(${descreverPosicao(jaNaLista.lista, jaNaLista.indice)}).`
+                `(${descreverPosicao(jaNaLista.parte, jaNaLista.indice)}).`
             );
 
         }
@@ -50,49 +51,48 @@ module.exports = async function add(ctx) {
         return ctx.responder('❌ Digite um nome ou marque a pessoa.\n\nExemplos:\n!add João\n!add @João');
     }
 
-    if (nomeEmUso(evento, nome)) {
-        return ctx.responder(`❌ *${nome}* já está na lista!`);
+    if (nomeEmUso(lista, nome)) {
+        return ctx.responder(`❌ ${nome} já está na lista!`);
     }
 
-    const inscritosAntes = evento.inscritos.length;
+    const inscritosAntes = lista.inscritos.length;
 
-    const destino = adicionarJogador(evento, {
+    const destino = adicionarJogador(lista, {
         nome,
         id: mencionado || null,
-        ids
+        ids,
+        pago: false,
+        adicionadoPorAdm: true
     });
 
     if (!destino) {
 
         return ctx.responder(
             `🚫 Não foi possível adicionar *${nome}*.\n\n` +
-            `📋 Inscritos: ${evento.inscritos.length}/${evento.limiteVagas}\n` +
-            `⏳ Espera: ${evento.listaEspera.length}/${evento.limiteEspera}`
+            `🏆 Inscritos: ${lista.inscritos.length}/${lista.limiteVagas}\n` +
+            `⏳ Espera: ${lista.listaEspera.length}/${lista.limiteEspera}`
         );
 
     }
 
     ctx.salvar();
 
-    await ctx.reagir(destino === 'inscritos' ? '✅' : '⏳');
-
-    const lista = evento[destino];
-    const posicao = descreverPosicao(destino, lista.length - 1);
-
     const quem = mencionado ? `${mencionar(mencionado)} (*${nome}*)` : `*${nome}*`;
+    const mencoes = mencionado ? [mencionado] : [];
 
-    let cabecalho = `➕ ${quem} foi adicionado(a) por um ADM — ${posicao}.`;
+    if (destino === 'inscritos') {
 
-    if (!mencionado) {
+        await ctx.reagir('✅');
 
-        const codigo = destino === 'inscritos' ? lista.length : `e${lista.length}`;
-
-        cabecalho += `\n\n💡 *${nome}*, para poder sair sozinho(a) depois, envie *!eusou ${codigo}*.`;
+        return ctx.responderComLista(
+            `✅ ${quem} foi adicionado aos inscritos!\n\n${textoRestam(lista)}${anunciarMeta(lista, inscritosAntes)}`,
+            mencoes
+        );
 
     }
 
-    await ctx.responderComLista(cabecalho, mencionado ? [mencionado] : []);
+    await ctx.reagir('⏳');
 
-    await celebrarMeta(ctx, inscritosAntes);
+    return ctx.responderComLista(`⏳ ${quem} foi adicionado à fila de espera!`, mencoes);
 
 };

@@ -1,57 +1,55 @@
-const { LOJA } = require('../utils/tiposEvento');
+const { LOJA } = require('../utils/loja');
 
 
+// !neymar (ou !ajudaney). Os comandos de cada lista (!ygo, !cup...)
+// não aparecem aqui: o comando de entrada é mostrado no fim da própria lista.
 module.exports = async function ajuda(ctx) {
 
-    const linhas = [`🤖 *COMANDOS ${LOJA.nome}*`];
-
-    if (ctx.evento) {
-        linhas.push(`${ctx.evento.emoji} Evento deste grupo: *${ctx.evento.titulo}*`);
-    }
-
-    linhas.push(
+    const linhas = [
+        `🤖 *COMANDOS ${LOJA.nome}*`,
         '',
-        '🎮 *JOGADORES*',
-        '📝 *!participar [Nome]* — entra na lista',
-        '📋 *!lista* — inscritos e fila de espera',
+        '📝 *!nomedalista Seu Nome* — entra na lista (o comando aparece no fim de cada lista)',
         '🏃 *!sair* — sai da lista',
-        '🔗 *!eusou [nº]* — assume a vaga que um ADM criou pra você',
-        '🔥 *!meta* — desafio da premiação',
-        '🆔 *!id* — mostra seu ID'
-    );
+        '🔥 *!meta* — desafio da premiação'
+    ];
 
     if (ctx.ehAdm) {
 
         linhas.push(
             '',
-            '👑 *ADM — EVENTOS*',
-            '🎉 *!criarevento [pokemon | magic | yugioh | nome livre]*',
-            '🏁 *!encerrarevento*',
-            '📅 *!eventos* — eventos ativos em todos os grupos',
-            '📦 *!importarlegado [tipo]* — traz a lista da versão antiga',
+            '👑 *ADM — LISTAS*',
+            '🆕 *!lista #nome data hora vagas reservas valor*',
+            '    ex.: !lista #ygo 30/10/2026 18h30 24 12 R$ 20,00',
+            '    _cria a lista; se ela já existir, recomeça uma nova edição_',
+            '👀 *!lista #nome* — ver a lista',
+            '📚 *!listas* — listas abertas',
+            '🔄 *!limparlista [lista]*',
+            '🗑️ *!excluirlista [lista]*',
+            '✅ *!confirmar* — confirma limpar, recomeçar ou excluir',
             '',
-            '⚙️ *ADM — CONFIGURAÇÃO*',
-            '🏷️ *!settitulo [título]*',
-            '📅 *!setdata [data]*',
-            '⏰ *!sethora [hora]*',
-            '💰 *!setvalor [valor]*',
-            '📍 *!setlocal [endereço]*',
-            '🎁 *!setbase [premiação base]*',
-            '📏 *!vagas [nº]*',
-            '⏳ *!espera [nº]*',
-            '🔥 *!meta [nº de jogadores]* (0 desativa)',
-            '🥇 *!premio1 [prêmio]*',
-            '🥈 *!premio2 [prêmio]*',
-            '🥉 *!premio3 [prêmio]*',
-            '🧹 *!limparpremios*',
+            '⚙️ *ADM — AJUSTES*',
+            '_O nome da lista é opcional se o grupo tiver só uma._',
+            '📅 *!setdata [lista] data*',
+            '⏰ *!sethora [lista] hora*',
+            '💰 *!setvalor [lista] valor*',
+            '🏷️ *!settitulo [lista] título*',
+            '📍 *!setlocal [lista] endereço*',
+            '🎁 *!setbase [lista] premiação base*',
+            '📏 *!vagas [lista] nº*',
+            '⏳ *!espera [lista] nº*',
+            '🔥 *!meta [lista] nº* (0 desativa)',
+            '🥇 *!premio1 [lista] prêmio*',
+            '🥈 *!premio2 [lista] prêmio*',
+            '🥉 *!premio3 [lista] prêmio*',
+            '🧹 *!limparpremios [lista]*',
             '',
-            '📋 *ADM — LISTA*',
-            '➕ *!add [Nome]* ou *!add @pessoa*',
-            '✏️ *!alterar [nº] [Nome]*',
-            '🗑️ *!remover [nº]*',
-            '🔗 *!vincular [nº] @pessoa*',
-            '_Use e1, e2... para posições da fila de espera._',
-            '🔄 *!limparlista* → *!confirmarlimpeza*',
+            '📋 *ADM — JOGADORES*',
+            '➕ *!add [lista] Nome* ou *!add [lista] @pessoa*',
+            '🆗 *!pago [lista] nº* / ↩️ *!naopago [lista] nº*',
+            '✏️ *!alterar [lista] nº Nome*',
+            '🗑️ *!remover [lista] nº*',
+            '🔗 *!vincular [lista] nº @pessoa*',
+            '_Use e1, e2... para a fila de espera._',
             '📢 *!todos [mensagem]*',
             '',
             '🛡️ *ADM — PERMISSÕES*',

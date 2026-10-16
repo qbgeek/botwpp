@@ -1,7 +1,11 @@
-const gerarBarraMeta = require('./barraMeta');
-const { LOJA } = require('./tiposEvento');
+// =========================================================
+// TEXTO DA LISTA
+// Segue o layout original da QB Geek, mostrando apenas até o
+// último nome inscrito (sem as linhas "----" das vagas vazias).
+// =========================================================
 
-const SEPARADOR = '━━━━━━━━━━━━━━━━━━';
+const gerarBarraMeta = require('./barraMeta');
+const { LOJA } = require('./loja');
 
 
 // plural(1, 'vaga', 'vagas') -> "1 vaga"
@@ -12,150 +16,136 @@ function plural(quantidade, singular, plural) {
 }
 
 
-function linhasPremios(evento) {
+function vagasRestantes(lista) {
+
+    return Math.max(lista.limiteVagas - lista.inscritos.length, 0);
+
+}
+
+
+// "📋 Restam 10 vagas", usado logo após cada inscrição
+function textoRestam(lista) {
+
+    const restam = vagasRestantes(lista);
+
+    if (restam === 0) {
+        return '🔒 Essa foi a última vaga, lista completa!';
+    }
+
+    return `📋 ${restam === 1 ? 'Resta' : 'Restam'} ${plural(restam, 'vaga', 'vagas')}`;
+
+}
+
+
+function nomeNaLista(jogador) {
+
+    return jogador.pago && !jogador.nome.includes('🆗')
+        ? `${jogador.nome} 🆗`
+        : jogador.nome;
+
+}
+
+
+function linhasPremios(lista) {
 
     return [
-        `🥇 ${evento.premio1}`,
-        `🥈 ${evento.premio2}`,
-        `🥉 ${evento.premio3}`
+        `🥇 ${lista.premio1}`,
+        `🥈 ${lista.premio2}`,
+        `🥉 ${lista.premio3}`
     ];
 
 }
 
 
-function linhasMeta(evento) {
+function textoMeta(lista) {
 
-    const inscritos = evento.inscritos.length;
-    const meta = evento.metaPremiacao;
+    const inscritos = lista.inscritos.length;
+    const meta = lista.metaPremiacao;
 
     const progresso = gerarBarraMeta(inscritos, meta);
 
-    const linhas = [
-        `🔥 *META DA SEMANA* 🔥`,
-        '',
-        `${progresso.barra}  *${progresso.porcentagem}%*`,
-        `👥 ${inscritos}/${meta} jogadores`,
-        ''
-    ];
+    let texto = `━━━━━━━━━━━━━━━━━━\n\n`;
+    texto += `🔥 *META DA SEMANA* 🔥\n\n`;
+    texto += `${progresso.barra}\n\n`;
+    texto += `${progresso.porcentagem}%\n\n`;
+    texto += `👥 ${inscritos}/${meta} jogadores\n\n`;
 
     if (inscritos >= meta) {
-        linhas.push(`🎉 *META ATINGIDA! Premiação especial liberada!*`);
+        texto += `🎉 *META ATINGIDA!*\n\n`;
     } else {
-        linhas.push(`🚀 Faltam apenas *${plural(meta - inscritos, 'jogador', 'jogadores')}*!`);
+        texto += `🚀 Faltam apenas *${plural(meta - inscritos, 'jogador', 'jogadores')}*!\n\n`;
     }
 
-    linhas.push(
-        '',
-        ...linhasPremios(evento),
-        '',
-        `_⚠️ A meta considera os jogadores presentes na ${LOJA.nome}._`
-    );
+    texto += `${linhasPremios(lista).join('\n')}\n\n`;
+    texto += `⚠️ A meta considera os jogadores presentes na ${LOJA.nome}.\n\n`;
 
-    return linhas;
+    return texto;
 
 }
 
 
-function linhasInscritos(evento) {
+function montarLista(lista) {
 
-    const total = evento.inscritos.length;
-    const limite = evento.limiteVagas;
+    const titulo = lista.titulo.endsWith('!') ? lista.titulo : `${lista.titulo}!`;
 
-    const linhas = [`📋 *INSCRITOS (${total}/${limite})*`, ''];
+    let texto = `🏆 *${titulo}*\n\n`;
+    texto += `🗓️:  ${lista.dataCamp}\n`;
+    texto += `⏰:  ${lista.horaCamp}\n`;
+    texto += `💰:  R$ ${lista.valorEntrada}\n`;
+    texto += `🎁 *PREMIAÇÃO BASE:*\n`;
+    texto += `${lista.premiacaoBase}\n\n`;
 
-    if (limite === 0) {
-
-        linhas.push('_Aguardando ADMs definirem as vagas..._');
-
-        return linhas;
-
+    if (lista.metaPremiacao > 0) {
+        texto += textoMeta(lista);
     }
 
-    for (let i = 0; i < limite; i++) {
+    texto += `📍: ${lista.local}\n`;
+    texto += `------------------------------------------\n`;
+    texto += `🏆 *LISTA DE INSCRITOS (${lista.inscritos.length}/${lista.limiteVagas})* 🏆\n\n`;
 
-        const jogador = evento.inscritos[i];
+    if (lista.limiteVagas === 0) {
 
-        linhas.push(`${i + 1}. ${jogador ? jogador.nome : '_vaga livre_'}`);
+        texto += `_Aguardando ADMs definirem as vagas..._\n`;
 
-    }
+    } else if (lista.inscritos.length === 0) {
 
-    linhas.push('');
-
-    if (total >= limite) {
-
-        linhas.push(
-            evento.listaEspera.length < evento.limiteEspera
-                ? '🔒 *Vagas esgotadas!* Novos inscritos vão para a fila de espera.'
-                : '🔒 *Vagas esgotadas!*'
-        );
+        texto += `_Ninguém inscrito ainda. Seja o primeiro!_\n`;
 
     } else {
 
-        linhas.push(`🟢 *${plural(limite - total, 'vaga disponível', 'vagas disponíveis')}*`);
+        lista.inscritos.forEach((jogador, i) => {
+            texto += `${i + 1}. ${nomeNaLista(jogador)}\n`;
+        });
 
     }
 
-    return linhas;
+    if (lista.limiteEspera > 0) {
 
-}
+        texto += `\n⏳ *FILA DE ESPERA (${lista.listaEspera.length}/${lista.limiteEspera})*\n`;
 
+        lista.listaEspera.forEach((jogador, i) => {
+            texto += `${i + 1}º. ${nomeNaLista(jogador)}\n`;
+        });
 
-function linhasEspera(evento) {
-
-    const linhas = [`⏳ *FILA DE ESPERA (${evento.listaEspera.length}/${evento.limiteEspera})*`, ''];
-
-    for (let i = 0; i < evento.limiteEspera; i++) {
-
-        const jogador = evento.listaEspera[i];
-
-        linhas.push(`${i + 1}º. ${jogador ? jogador.nome : '----'}`);
-
-    }
-
-    return linhas;
-
-}
-
-
-// A lista completa do evento, enviada após qualquer alteração
-function montarLista(evento) {
-
-    const linhas = [
-        `${evento.emoji} *${evento.titulo}* ${evento.emoji}`,
-        SEPARADOR,
-        `🗓️ *Data:* ${evento.dataCamp}`,
-        `⏰ *Horário:* ${evento.horaCamp}`,
-        `💰 *Entrada:* R$ ${evento.valorEntrada}`,
-        `🎁 *Premiação base:* ${evento.premiacaoBase}`,
-        `📍 ${evento.local}`
-    ];
-
-    if (evento.metaPremiacao > 0) {
-        linhas.push(SEPARADOR, ...linhasMeta(evento));
-    }
-
-    linhas.push(SEPARADOR, ...linhasInscritos(evento));
-
-    if (evento.limiteEspera > 0) {
-        linhas.push('', ...linhasEspera(evento));
     }
 
     const temEspaco =
-        evento.inscritos.length < evento.limiteVagas ||
-        evento.listaEspera.length < evento.limiteEspera;
+        lista.inscritos.length < lista.limiteVagas ||
+        lista.listaEspera.length < lista.limiteEspera;
 
     if (temEspaco) {
-        linhas.push(SEPARADOR, '✍️ Para entrar: *!participar Seu Nome*');
+        texto += `\n✍️ Para entrar: *!${lista.comando} Seu Nome*`;
     }
 
-    return linhas.join('\n');
+    return texto.trimEnd();
 
 }
 
 
 module.exports = {
-    SEPARADOR,
     plural,
-    montarLista,
-    linhasPremios
+    vagasRestantes,
+    textoRestam,
+    linhasPremios,
+    montarLista
 };

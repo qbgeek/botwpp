@@ -14,16 +14,16 @@ async function definirMeta(ctx) {
         return ctx.responder('❌ Use assim: !meta 20\n\n(!meta 0 desativa a meta)');
     }
 
-    ctx.evento.metaPremiacao = valor;
+    ctx.lista.metaPremiacao = valor;
 
     ctx.salvar();
 
     await ctx.reagir('🔥');
 
-    return ctx.responderComLista(
+    return ctx.responder(
         valor === 0
-            ? '🔥 Meta de premiação desativada.'
-            : `🔥 Meta definida: *${plural(valor, 'jogador', 'jogadores')}*`
+            ? `🔥 Meta desativada (*${ctx.lista.comando}*).`
+            : `🔥 Meta definida (*${ctx.lista.comando}*): *${plural(valor, 'jogador', 'jogadores')}*`
     );
 
 }
@@ -31,12 +31,12 @@ async function definirMeta(ctx) {
 
 async function mostrarMeta(ctx) {
 
-    const { evento } = ctx;
+    const { lista } = ctx;
 
-    const inscritos = evento.inscritos.length;
-    const meta = evento.metaPremiacao;
+    const inscritos = lista.inscritos.length;
+    const meta = lista.metaPremiacao;
 
-    const linhas = [`🔥 *DESAFIO — ${evento.titulo}* 🔥`, ''];
+    const linhas = [`🔥 *DESAFIO — ${lista.titulo}* 🔥`, ''];
 
     if (meta === 0) {
 
@@ -73,7 +73,7 @@ async function mostrarMeta(ctx) {
 
     }
 
-    linhas.push(...linhasPremios(evento));
+    linhas.push(...linhasPremios(lista));
 
     return ctx.responder(linhas.join('\n'));
 

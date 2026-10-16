@@ -1,6 +1,6 @@
 const { preencherVagas } = require('../utils/listas');
-const { anunciarPromovidos, celebrarMeta } = require('../utils/efeitos');
-const { plural } = require('../utils/formatacao');
+const { anunciarPromovidos, anunciarMeta } = require('../utils/efeitos');
+const { plural, vagasRestantes } = require('../utils/formatacao');
 
 
 function lerNumero(ctx) {
@@ -12,7 +12,7 @@ function lerNumero(ctx) {
 
 async function vagas(ctx) {
 
-    const { evento } = ctx;
+    const { lista } = ctx;
 
     const valor = lerNumero(ctx);
 
@@ -24,41 +24,48 @@ async function vagas(ctx) {
         return ctx.responder('❌ O número de vagas deve ser maior que zero.');
     }
 
-    if (valor < evento.inscritos.length) {
+    if (valor < lista.inscritos.length) {
 
         return ctx.responder(
-            `❌ Existem ${evento.inscritos.length} jogadores inscritos.\n\n` +
-            `Defina pelo menos ${evento.inscritos.length} vagas.`
+            `❌ Existem ${lista.inscritos.length} jogadores inscritos.\n\n` +
+            `Defina pelo menos ${lista.inscritos.length} vagas.`
         );
 
     }
 
-    const inscritosAntes = evento.inscritos.length;
+    const inscritosAntes = lista.inscritos.length;
 
-    evento.limiteVagas = valor;
+    lista.limiteVagas = valor;
 
     // Se abriram vagas novas, a fila de espera sobe automaticamente
-    const promovidos = preencherVagas(evento);
+    const promovidos = preencherVagas(lista);
 
     ctx.salvar();
 
     await ctx.reagir('📏');
 
+    const resumo =
+        `📏 Vagas definidas (*${lista.comando}*): *${valor}*\n` +
+        `📋 Restam: *${plural(vagasRestantes(lista), 'vaga', 'vagas')}*`;
+
+    // Só mostra a lista inteira se alguém mudou de lugar
+    if (promovidos.length === 0) {
+        return ctx.responder(resumo);
+    }
+
     const promocao = anunciarPromovidos(promovidos);
 
-    await ctx.responderComLista(
-        `📏 Vagas definidas: *${valor}*${promocao.texto}`,
+    return ctx.responderComLista(
+        `${resumo}${promocao.texto}${anunciarMeta(lista, inscritosAntes)}`,
         promocao.mencoes
     );
-
-    await celebrarMeta(ctx, inscritosAntes);
 
 }
 
 
 async function espera(ctx) {
 
-    const { evento } = ctx;
+    const { lista } = ctx;
 
     const valor = lerNumero(ctx);
 
@@ -70,22 +77,22 @@ async function espera(ctx) {
         return ctx.responder('❌ O limite da espera não pode ser negativo.');
     }
 
-    if (valor < evento.listaEspera.length) {
+    if (valor < lista.listaEspera.length) {
 
         return ctx.responder(
-            `❌ Existem ${evento.listaEspera.length} jogadores na fila de espera.\n\n` +
-            `Defina pelo menos ${evento.listaEspera.length} vagas de espera.`
+            `❌ Existem ${lista.listaEspera.length} jogadores na fila de espera.\n\n` +
+            `Defina pelo menos ${lista.listaEspera.length} vagas de espera.`
         );
 
     }
 
-    evento.limiteEspera = valor;
+    lista.limiteEspera = valor;
 
     ctx.salvar();
 
     await ctx.reagir('⏳');
 
-    return ctx.responderComLista(`⏳ Fila de espera definida: *${plural(valor, 'vaga', 'vagas')}*`);
+    return ctx.responder(`⏳ Fila de espera (*${lista.comando}*): *${plural(valor, 'reserva', 'reservas')}*`);
 
 }
 

@@ -22,14 +22,69 @@ function jogadorNaPosicao(ctx) {
         return { posicao: null, resto };
     }
 
-    const jogador = ctx.evento[posicao.lista][posicao.indice] || null;
+    const jogador = ctx.lista[posicao.parte][posicao.indice] || null;
 
     return { posicao, jogador, resto };
 
 }
 
 
-const POSICAO_INVALIDA = '❌ Posição inválida. Confira os números com *!lista*.';
+const POSICAO_INVALIDA = '❌ Posição inválida. Confira os números na lista.';
+
+
+// !pago 14 -> coloca o 🆗 ao lado do nome
+async function pago(ctx) {
+
+    const { posicao, jogador } = jogadorNaPosicao(ctx);
+
+    if (!posicao) {
+        return ctx.responder('❌ Informe a posição.\n\nExemplo: *!pago 14*\nFila de espera: *!pago e1*');
+    }
+
+    if (!jogador) {
+        return ctx.responder(POSICAO_INVALIDA);
+    }
+
+    if (jogador.pago) {
+        return ctx.responder(`🆗 *${jogador.nome}* já está marcado como pago.`);
+    }
+
+    jogador.pago = true;
+
+    ctx.salvar();
+
+    await ctx.reagir('🆗');
+
+    return ctx.responderComLista(`🆗 Pagamento confirmado: *${jogador.nome}*`);
+
+}
+
+
+async function naoPago(ctx) {
+
+    const { posicao, jogador } = jogadorNaPosicao(ctx);
+
+    if (!posicao) {
+        return ctx.responder('❌ Informe a posição.\n\nExemplo: *!naopago 14*');
+    }
+
+    if (!jogador) {
+        return ctx.responder(POSICAO_INVALIDA);
+    }
+
+    if (!jogador.pago) {
+        return ctx.responder(`*${jogador.nome}* não está marcado como pago.`);
+    }
+
+    jogador.pago = false;
+
+    ctx.salvar();
+
+    await ctx.reagir('↩️');
+
+    return ctx.responderComLista(`↩️ Pagamento desmarcado: *${jogador.nome}*`);
+
+}
 
 
 async function alterar(ctx) {
@@ -46,8 +101,8 @@ async function alterar(ctx) {
         return ctx.responder(POSICAO_INVALIDA);
     }
 
-    if (nomeEmUso(ctx.evento, novoNome, jogador)) {
-        return ctx.responder(`❌ *${novoNome}* já está na lista!`);
+    if (nomeEmUso(ctx.lista, novoNome, jogador)) {
+        return ctx.responder(`❌ ${novoNome} já está na lista!`);
     }
 
     const nomeAntigo = jogador.nome;
@@ -58,7 +113,7 @@ async function alterar(ctx) {
 
     await ctx.reagir('✏️');
 
-    return ctx.responderComLista(`✏️ *Nome alterado!*\nAntes: ${nomeAntigo}\nAgora: *${novoNome}*`);
+    return ctx.responderComLista(`✅ Alterado!\nAntes: ${nomeAntigo}\nAgora: ${novoNome}`);
 
 }
 
@@ -68,54 +123,33 @@ async function remover(ctx) {
     const { posicao, jogador } = jogadorNaPosicao(ctx);
 
     if (!posicao) {
-        return ctx.responder('❌ Informe a posição.\n\nExemplos:\n!remover 3\n!remover e1 (fila de espera)');
+        return ctx.responder('❌ Informe um número válido.\n\nExemplo:\n!remover 3\n!remover e1 (fila de espera)');
     }
 
     if (!jogador) {
         return ctx.responder(POSICAO_INVALIDA);
     }
 
-    const { removido, promovidos } = removerJogador(ctx.evento, posicao.lista, posicao.indice);
+    const { removido, promovidos } = removerJogador(ctx.lista, posicao.parte, posicao.indice);
 
     ctx.salvar();
 
     await ctx.reagir('🗑️');
 
-    const origem = posicao.lista === 'inscritos' ? 'da lista' : 'da fila de espera';
+    const origem = posicao.parte === 'inscritos' ? 'da lista' : 'da fila de espera';
 
     const promocao = anunciarPromovidos(promovidos);
 
     return ctx.responderComLista(
-        `🗑️ *${removido.nome}* foi removido(a) ${origem}.${promocao.texto}`,
+        `🗑️ *${removido.nome}* foi removido ${origem}.${promocao.texto}`,
         promocao.mencoes
     );
 
 }
 
 
-// Liga uma vaga a uma pessoa do WhatsApp, para que ela possa usar !sair
-function vincularJogador(ctx, jogador, id, ids) {
-
-    const ocupante = encontrarJogador(ctx.evento, ids);
-
-    if (ocupante && ocupante.jogador !== jogador) {
-
-        return `❌ Essa pessoa já está na lista como *${ocupante.jogador.nome}* ` +
-            `(${descreverPosicao(ocupante.lista, ocupante.indice)}).`;
-
-    }
-
-    jogador.id = id;
-    jogador.ids = ids;
-
-    ctx.salvar();
-
-    return null;
-
-}
-
-
-// ADM: !vincular 3 @pessoa
+// !vincular 3 @pessoa -> liga uma vaga ao WhatsApp da pessoa
+// (passa a marcá-la quando subir da espera e evita inscrição dupla)
 async function vincular(ctx) {
 
     const { posicao, jogador } = jogadorNaPosicao(ctx);
@@ -132,66 +166,37 @@ async function vincular(ctx) {
 
     const ids = await resolverIds(ctx.client, mencionado);
 
-    const erro = vincularJogador(ctx, jogador, mencionado, ids);
+    const ocupante = encontrarJogador(ctx.lista, ids);
 
-    if (erro) {
-        return ctx.responder(erro);
+    if (ocupante && ocupante.jogador !== jogador) {
+
+        return ctx.responder(
+            `❌ Essa pessoa já está na lista como *${ocupante.jogador.nome}* ` +
+            `(${descreverPosicao(ocupante.parte, ocupante.indice)}).`
+        );
+
     }
+
+    jogador.id = mencionado;
+    jogador.ids = ids;
+
+    ctx.salvar();
 
     await ctx.reagir('🔗');
 
     return ctx.responderComLista(
-        `🔗 *${jogador.nome}* (${descreverPosicao(posicao.lista, posicao.indice)}) ` +
-        `agora está vinculado(a) a ${mencionar(mencionado)}.\nJá pode usar *!sair* quando quiser.`,
+        `🔗 *${jogador.nome}* (${descreverPosicao(posicao.parte, posicao.indice)}) ` +
+        `agora está vinculado a ${mencionar(mencionado)}.`,
         [mencionado]
     );
 
 }
 
 
-// Jogador: !eusou 3 — assume uma vaga criada por ADM que ainda não tem dono
-async function euSou(ctx) {
-
-    const { posicao, jogador } = jogadorNaPosicao(ctx);
-
-    if (!posicao) {
-        return ctx.responder('❌ Informe o número da sua posição na *!lista*.\n\nExemplo: !eusou 3');
-    }
-
-    if (!jogador) {
-        return ctx.responder(POSICAO_INVALIDA);
-    }
-
-    if (jogador.ids.length > 0) {
-
-        return ctx.responder(
-            jogador.ids.some(id => ctx.idsUsuario.includes(id))
-                ? '✅ Essa vaga já é sua!'
-                : '❌ Essa vaga já pertence a outra pessoa. Se for um engano, fale com um ADM.'
-        );
-
-    }
-
-    const erro = vincularJogador(ctx, jogador, ctx.idUsuario, ctx.idsUsuario);
-
-    if (erro) {
-        return ctx.responder(erro.replace('Essa pessoa já está', 'Você já está'));
-    }
-
-    await ctx.reagir('🔗');
-
-    return ctx.responderComLista(
-        `🔗 ${mencionar(ctx.idUsuario)} confirmou que é *${jogador.nome}* ` +
-        `(${descreverPosicao(posicao.lista, posicao.indice)}).\nAgora pode usar *!sair* quando quiser.`,
-        [ctx.idUsuario]
-    );
-
-}
-
-
 module.exports = {
+    pago,
+    naoPago,
     alterar,
     remover,
-    vincular,
-    euSou
+    vincular
 };

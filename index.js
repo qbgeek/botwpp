@@ -6,11 +6,11 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
 const executarComando = require('./comandos');
-const { listarEventos } = require('./utils/eventos');
+const { todasAsListas } = require('./utils/grupos');
 const { config } = require('./utils/config');
 
 console.log(`✅ Configuração carregada (${config.admins.length} ADMs)`);
-console.log(`✅ Eventos carregados (${listarEventos().length} ativos)`);
+console.log(`✅ Listas carregadas (${todasAsListas().length} abertas)`);
 
 
 // =========================================================

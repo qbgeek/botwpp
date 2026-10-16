@@ -17,28 +17,28 @@ async function definir(ctx) {
         return ctx.responder(`❌ Use assim:\n${exemplo}`);
     }
 
-    ctx.evento[campo] = premio;
+    ctx.lista[campo] = premio;
 
     ctx.salvar();
 
     await ctx.reagir(medalha);
 
-    return ctx.responderComLista(`${medalha} ${lugar} definido: *${premio}*`);
+    return ctx.responder(`${medalha} ${lugar} definido (*${ctx.lista.comando}*):\n${premio}`);
 
 }
 
 
 async function limpar(ctx) {
 
-    ctx.evento.premio1 = 'Não definido';
-    ctx.evento.premio2 = 'Não definido';
-    ctx.evento.premio3 = 'Não definido';
+    ctx.lista.premio1 = 'Não definido';
+    ctx.lista.premio2 = 'Não definido';
+    ctx.lista.premio3 = 'Não definido';
 
     ctx.salvar();
 
     await ctx.reagir('🧹');
 
-    return ctx.responderComLista('🧹 Premiações especiais apagadas!');
+    return ctx.responder(`🗑️ Premiações especiais apagadas (*${ctx.lista.comando}*)!`);
 
 }
 

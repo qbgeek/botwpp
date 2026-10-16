@@ -1,254 +1,282 @@
 # Alterações — branch `feat/multi-eventos`
 
-Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da QB Geek nesta branch, além dos passos para atualizar o servidor sem perder a lista atual.
+Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da QB Geek nesta branch. Também traz os passos para atualizar o servidor sem perder a lista atual.
 
 ## Resumo
 
 1. **Correção de todos os erros identificados**: o principal é que qualquer pessoa conseguia executar comandos de ADM.
-2. **Vários eventos ao mesmo tempo**: cada grupo do WhatsApp pode ter o seu evento (Magic em um grupo, Yu-Gi-Oh! em outro, Pokémon em outro), todos com a mesma estrutura e listas independentes.
-3. **Lista sempre atualizada**: toda alteração faz o bot responder com a lista completa e atual.
-4. **Emojis e efeitos**: reações nas mensagens, marcação de quem sobe da fila de espera, comemoração quando a meta é atingida, barra de progresso, aviso de vagas esgotadas.
-5. **Quem foi adicionado por ADM agora consegue sair sozinho** (veja a seção específica).
+2. **Várias listas com nome livre**: o ADM cria `!lista #ygo` e a galera entra com `!ygo Nome`. Cada grupo pode ter várias listas ao mesmo tempo (`!ygo`, `!cup`, `!glc`, `!mesão`…).
+3. **Criação em um comando só**: `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00`.
+4. **Lista atualizada a cada inscrição**, mostrando só até o último nome. O `!lista` de consulta deixou de ser público.
+5. **`!pago 14`** coloca o 🆗 ao lado do nome. Vaga paga ou adicionada pelo ADM não sai sozinha.
+6. **Menu `!neymar`** (ou `!ajudaney`), dividido entre jogadores e ADM, sem `!id` e sem os comandos das listas.
 
 ---
 
-## 1. Correções de erros
+## 1. Pedidos do Artur e como ficaram
+
+| Pedido | Como ficou |
+|--------|------------|
+| "Que todos os comandos da ADM não possam ser usados por ninguém" | A permissão é checada antes de qualquer comando de ADM |
+| Menu dividido entre público e ADM | O `!neymar` só mostra a parte de ADM para ADMs |
+| `!ajuda` / `!comandos` passa a ser `!neymar` | `!neymar` (e `!ajudaney`). `!ajuda` e `!comandos` não respondem mais |
+| Tirar o `!id` do menu | Fora do menu; virou comando só de ADM |
+| "`!lista ygo` cria uma lista pro comando `!ygo`"; inscrição com "`!ygo lucas chagas`" | `!lista #ygo` cria; `!ygo Nome` inscreve |
+| Listas: `!GLC`, `!YGO`, `!MESÃO`, `!CUP`, `!PRERELEASE`, `!CHALLENGE`, `!PREMIERE` | Qualquer nome funciona; maiúsculas e acentos são ignorados (`!MESÃO` = `!mesao`) |
+| Não mostrar esses comandos no menu | O menu não lista as listas; o comando de entrada aparece no fim de cada lista |
+| Data, hora e valor de cada lista num comando só | `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00` |
+| Mostrar a lista atualizada ao se inscrever, no formato "✅ Artur inscrito! 📋 Restam 10 vagas" + lista | Exatamente esse formato |
+| "Exibisse até o último nome que foi adicionado" | As linhas "----" das vagas vazias não aparecem mais |
+| "A gente exclui o comando `!lista`", por causa do spam | `!lista` virou comando de ADM; para quem não é ADM, o bot só reage com 🔒, sem mensagem |
+| `!pago 14` coloca o 🆗 ao lado do nome | Feito, inclusive para quem entrou sozinho; `!naopago` desfaz |
+| `!add` é para quem pagou antes, só o ADM adiciona | Quem foi adicionado pelo ADM não sai sozinho |
+| Marcar todos (`!todos`) | Corrigido; o comando nunca tinha funcionado |
+| Sistema de avaliação/denúncia | **Não feito.** O próprio Artur desistiu ("muito trabalho, pra pouquíssimo retorno") |
+
+---
+
+## 2. Correções de erros
 
 | # | Problema | Impacto | Correção |
 |---|----------|---------|----------|
-| 1 | Os comandos de ADM (`!add`, `!vagas`, `!remover`, `!limparlista`, `!confirmarlimpeza` etc.) eram executados **antes** de checar se a pessoa era ADM | Qualquer membro do grupo podia apagar a lista, remover jogadores ou mudar as vagas, e ainda recebia "Acesso negado" depois da ação | A permissão agora é verificada em um único lugar ([comandos/index.js](comandos/index.js)), **antes** de executar. Cada comando tem `admin: true/false` em uma tabela |
-| 2 | Código duplicado em `index.js` chamava funções que não existiam (`comandoConfiguracao`, `comandoParticipar`, `comandoTodos`…) | Quase todo comando gerava um erro `ReferenceError` no log | Código removido; o `index.js` só inicia o WhatsApp e repassa as mensagens ao roteador |
-| 3 | `!add` criava um ID falso (`ADM_<número>`) | A pessoa adicionada pelo ADM nunca conseguia usar `!sair` | `!add @pessoa` vincula a vaga; `!eusou` e `!vincular` resolvem as vagas antigas (seção 5) |
-| 4 | O bot respondia comandos de campeonato em **qualquer conversa**, inclusive no privado | Alguém podia se inscrever pelo privado | Comandos de evento só funcionam em grupos com evento ativo |
-| 5 | `!limparlista` zerava a quantidade de vagas sem avisar | Depois da limpeza, ninguém conseguia se inscrever até um ADM usar `!vagas` | A limpeza mantém vagas, espera, valor, título, local e premiação base; a mensagem de confirmação lista exatamente o que é apagado e o que é mantido |
-| 6 | `dados_campeonato.json` (com nomes reais dos jogadores) estava no git | Dados pessoais versionados | Arquivo removido do git e adicionado ao `.gitignore`, junto com a nova pasta `dados/` |
-| 7 | `!todos` passava as opções no lugar errado (`msg.reply(texto, { mentions })`) | O comando nunca funcionou, ninguém era marcado | Corrigido para `msg.reply(texto, undefined, { mentions })`; agora aceita mensagem: `!todos Começa às 19h!` |
-| 8 | Se o JSON de dados corrompesse, o bot o **sobrescrevia** com dados vazios | Perda total da lista | Antes de seguir, o arquivo corrompido é copiado para `*.corrompido-<data>` |
-| 9 | Gravação direta no arquivo | Uma queda durante a gravação podia deixar o JSON pela metade | Gravação em arquivo temporário seguida de renomeação ([utils/arquivoJson.js](utils/arquivoJson.js)) |
-| 10 | Caminhos relativos (`./config.json`) | Se o bot fosse iniciado de outra pasta, criava arquivos no lugar errado | Caminhos baseados na pasta do projeto (`__dirname`) |
-| 11 | `config.json` inválido derrubava o bot na inicialização | Bot não subia | Leitura protegida, com backup do arquivo inválido |
-| 12 | `!id` era exclusivo de ADM e a lista de ADMs começava vazia | Não havia como cadastrar o primeiro ADM pelo WhatsApp | O próprio número do bot é sempre ADM; `!id` é público (mostra só o seu próprio ID) |
-| 13 | Comandos eram reconhecidos por "começa com" (`!participarXYZ` funcionava como `!participar`) | Comportamento inesperado | O comando precisa ser a primeira palavra exata |
-| 14 | `!meta 0` era recusado | Não dava para desligar a meta | `!meta 0` desativa a meta |
-| 15 | A confirmação de limpeza era global e não expirava | Um ADM podia confirmar, horas depois, uma limpeza pedida em outro contexto | Confirmação por grupo, válida por 2 minutos |
-| 16 | Aumentar as vagas (`!vagas`) não puxava ninguém da fila de espera | Quem estava esperando continuava esperando com vaga livre | Ao aumentar as vagas, a fila sobe automaticamente e quem subiu é marcado |
-| 17 | `!alterar` e `!remover` só funcionavam na lista principal | Não era possível corrigir a fila de espera | Use `e1`, `e2`… para posições da fila (ex.: `!remover e1`) |
+| 1 | Os comandos de ADM eram executados **antes** de checar se a pessoa era ADM | Qualquer membro podia apagar a lista ou mudar vagas. O histórico do grupo mostra isso acontecendo: o comando rodava e só depois vinha "Acesso negado" | A permissão é verificada num único lugar ([comandos/index.js](comandos/index.js)), **antes** de executar |
+| 2 | Código duplicado em `index.js` chamava funções inexistentes | Quase todo comando gerava `ReferenceError` no log | Código removido; o `index.js` só inicia o WhatsApp |
+| 3 | `!add` criava um ID falso (`ADM_<número>`) | O `!sair` nunca encontrava a pessoa | A vaga agora é marcada como "adicionada pelo ADM" e só um ADM a remove (seção 5) |
+| 4 | O bot respondia comandos de lista no privado | Era possível se inscrever pelo privado | Listas só funcionam no grupo onde foram criadas |
+| 5 | `!limparlista` zerava as vagas sem avisar | Ninguém conseguia se inscrever até um novo `!vagas` | A limpeza mantém vagas, reservas, valor, título e local |
+| 6 | `dados_campeonato.json` (com nomes reais) estava no git | Dados pessoais versionados | Removido do git e adicionado ao `.gitignore`, junto com a pasta `dados/` |
+| 7 | `!todos` passava as opções no lugar errado | O comando nunca funcionou | Corrigido; aceita mensagem: `!todos Começa às 19h!` |
+| 8 | Se o JSON corrompesse, o bot o **sobrescrevia** vazio | Perda total da lista | O arquivo corrompido é copiado para `*.corrompido-<data>` antes |
+| 9 | Gravação direta no arquivo | Uma queda podia deixar o JSON pela metade | Grava em arquivo temporário e depois renomeia ([utils/arquivoJson.js](utils/arquivoJson.js)) |
+| 10 | Caminhos relativos (`./config.json`) | Iniciar de outra pasta criava arquivos no lugar errado | Caminhos baseados na pasta do projeto |
+| 11 | `config.json` inválido derrubava o bot | Bot não subia | Leitura protegida, com backup do arquivo inválido |
+| 12 | Não havia como cadastrar o primeiro ADM pelo WhatsApp | Era preciso editar o `config.json` à mão | O número do bot é sempre ADM; `!addadm @pessoa` aceita marcação |
+| 13 | Comandos reconhecidos por "começa com" (`!participarXYZ`) | Comportamento inesperado | O comando precisa ser a primeira palavra exata |
+| 14 | `!meta 0` era recusado | Não dava para desligar a meta | `!meta 0` desativa |
+| 15 | A confirmação de limpeza era global e não expirava | Era possível confirmar horas depois | Confirmação por grupo, válida por 2 minutos |
+| 16 | Aumentar as vagas não puxava a fila de espera | Gente esperando com vaga livre | Ao aumentar as vagas, a fila sobe automaticamente e quem subiu é marcado |
+| 17 | `!alterar` e `!remover` só funcionavam na lista principal | Não dava para corrigir a fila de espera | Use `e1`, `e2`… (ex.: `!remover e1`) |
 | 18 | O aviso "Mais de 30 segundos esperando o WhatsApp" aparecia sempre | Log confuso | O aviso é cancelado quando o bot fica pronto |
-| 19 | O WhatsApp identifica a mesma pessoa por número (`@c.us`) ou por ID anônimo (`@lid`) | Um ADM podia não ser reconhecido, ou alguém podia não ser encontrado na lista ao usar `!sair` | O bot resolve as duas formas e compara ambas ([utils/identidade.js](utils/identidade.js)) |
-| 20 | Erros em comandos ficavam sem resposta para o usuário | O usuário ficava sem saber se funcionou | Erros são registrados no log e o bot responde "Algo deu errado" |
+| 19 | O WhatsApp identifica a mesma pessoa por número (`@c.us`) ou ID anônimo (`@lid`) | ADM não reconhecido, ou `!sair` sem encontrar a pessoa | O bot resolve as duas formas ([utils/identidade.js](utils/identidade.js)) |
+| 20 | Erros em comandos ficavam sem resposta | O usuário ficava sem saber se funcionou | Erro registrado no log e resposta "Algo deu errado" |
 | 21 | Nomes sem limite de tamanho | Uma mensagem gigante poluía a lista | Nomes limitados a 40 caracteres; textos de configuração a 120 |
 
 ---
 
-## 2. Vários eventos ao mesmo tempo (um por grupo)
+## 3. Listas com nome livre
 
 ### Como funciona
 
-- Cada **grupo** do WhatsApp pode ter **um evento ativo**.
-- Os eventos são independentes: inscrever-se no grupo de Magic não interfere no de Yu-Gi-Oh!.
+- O ADM cria uma lista com um nome qualquer, e **esse nome vira o comando de inscrição**: a lista `#ygo` responde a `!ygo`.
+- Um **grupo pode ter várias listas** ao mesmo tempo (ex.: `!cup` e `!challenge` no grupo de Pokémon).
+- Cada lista pertence ao **grupo onde foi criada**: `!ygo` não funciona no grupo de Pokémon se a lista foi criada no grupo de Yu-Gi-Oh!.
+- Todas as listas têm **a mesma estrutura**; só mudam os dados (data, hora, valor, vagas, prêmios…).
 - Os **ADMs são globais**: quem é ADM, é ADM em todos os grupos.
-- Todos os eventos têm **a mesma estrutura de configuração**; o que muda são os valores (título, emoji, data, vagas, prêmios…).
+- O nome não diferencia maiúsculas nem acentos (`!MESÃO`, `!Mesão` e `!mesao` são a mesma lista). Não pode começar com número nem repetir um comando do bot (ex.: `#sair`).
 
-### Criando um evento
+### Criar ou recomeçar com um comando só
 
-No grupo desejado, um ADM envia:
+```
+!lista #ygo 30/10/2026 18h30 24 12 R$ 35,00 MASTERS, R$: 25,00 SEN/JR
+        │     │         │    │  │   └── valor (opcional, o resto da mensagem)
+        │     │         │    │  └────── reservas (fila de espera)
+        │     │         │    └───────── vagas
+        │     │         └────────────── hora (sem espaços: 18h30, 10h00AM)
+        │     └──────────────────────── data
+        └────────────────────────────── nome da lista
+```
 
-| Comando | Resultado |
-|---------|-----------|
-| `!criarevento pokemon` | ⚡ LIGA POKÉMON QB |
-| `!criarevento magic` (ou `mtg`) | 🔮 LIGA MAGIC QB |
-| `!criarevento yugioh` (ou `ygo`, `Yu-Gi-Oh!`) | 🐉 LIGA YU-GI-OH! QB |
-| `!criarevento Torneio de One Piece` | 🎲 TORNEIO DE ONE PIECE (nome livre) |
+- **O valor vem por último**, então pode ter espaços e vírgulas.
+- **Se a lista já existe**, o comando **abre uma nova edição**: o bot pede `!confirmar`, zera os inscritos e aplica os novos dados. Isso substitui o ritual semanal de `!limparlista` + `!setdata` + `!sethora` + `!vagas`.
+- Sem valor, a nova edição **mantém o valor anterior**.
+- `!lista #ygo` sem dados mostra a lista. Se ela não existir, cria uma lista vazia para configurar depois.
 
-Depois é só configurar com `!vagas`, `!espera`, `!setdata`, `!sethora` e `!setvalor`. O título pode ser trocado com `!settitulo`.
+### Ajustes rápidos
 
-Para **adicionar um novo tipo fixo** (ex.: One Piece, Lorcana), basta incluir uma entrada em [utils/tiposEvento.js](utils/tiposEvento.js). Não é preciso mexer em mais nada.
+Os comandos de ajuste recebem o nome da lista logo depois do comando: `!vagas ygo 28`, `!setvalor cup 15,00`, `!pago ygo 14`.
+
+**Se o grupo tiver uma lista só, o nome é opcional**: `!vagas 28` e `!pago 14` funcionam. Se o grupo tiver várias e o nome faltar, o bot pergunta: "Qual lista? Este grupo tem: ygo, cup".
 
 ### Estrutura de dados
 
-Antes havia um único arquivo, `dados_campeonato.json`, com um campeonato. Agora existe `dados/eventos.json`, com um evento por grupo. Os nomes dos campos antigos foram mantidos e alguns foram adicionados:
+O antigo `dados_campeonato.json` (uma lista só) foi substituído por `dados/listas.json`:
 
 ```json
 {
   "120363000000000000@g.us": {
-    "tipo": "magic",
-    "titulo": "LIGA MAGIC QB",
-    "emoji": "🔮",
-    "grupo": "Liga Magic QB Geek",
-    "dataCamp": "01/09/2026",
-    "horaCamp": "18h30",
-    "valorEntrada": "20,00",
-    "local": "R. da Hora, 345 - Loja 14 - Espinheiro, Recife - PE, 52020-010",
-    "premiacaoBase": "Créditos em loja.",
-    "limiteVagas": 16,
-    "limiteEspera": 4,
-    "metaPremiacao": 16,
-    "premio1": "Booster Box",
-    "premio2": "Não definido",
-    "premio3": "Não definido",
-    "inscritos": [
-      { "nome": "Ana", "id": "123456789@lid", "ids": ["123456789@lid", "5581999999999@c.us"] }
-    ],
-    "listaEspera": []
+    "nome": "Liga Pokémon QB Geek",
+    "listas": {
+      "cup": {
+        "chave": "cup",
+        "comando": "cup",
+        "titulo": "CUP",
+        "dataCamp": "30/10/2026",
+        "horaCamp": "18h30",
+        "valorEntrada": "20,00",
+        "local": "R. da Hora, 345 - Loja 14 - Espinheiro, Recife - PE, 52020-010",
+        "premiacaoBase": "Créditos em loja.",
+        "limiteVagas": 24,
+        "limiteEspera": 12,
+        "metaPremiacao": 0,
+        "premio1": "Não definido",
+        "premio2": "Não definido",
+        "premio3": "Não definido",
+        "inscritos": [
+          {
+            "nome": "Lucas Chagas",
+            "id": "123456789@lid",
+            "ids": ["123456789@lid", "5581999999999@c.us"],
+            "pago": true,
+            "adicionadoPorAdm": false
+          }
+        ],
+        "listaEspera": []
+      }
+    }
   }
 }
 ```
 
-- **Campos novos**: `tipo`, `titulo`, `emoji`, `grupo`, `local`, `premiacaoBase`, `criadoEm`.
-- **Jogador**: `ids` guarda todas as formas de ID da pessoa. Se estiver vazio, a vaga foi criada por um ADM e ainda não tem dono.
-
-### Comandos novos de gestão de eventos (ADM)
-
-- `!criarevento [tipo ou nome]`: cria o evento no grupo.
-- `!encerrarevento` → `!confirmarencerramento`: apaga o evento do grupo.
-- `!eventos`: lista os eventos ativos em todos os grupos (funciona também no privado do bot).
-- `!importarlegado [tipo]`: importa a lista da versão antiga para o grupo atual (veja a seção 7).
-
 ---
 
-## 3. Lista sempre atualizada
+## 4. Lista atualizada (e menos spam)
 
-Toda vez que algo muda no evento, o bot responde **na mesma mensagem** com o que mudou e, logo abaixo, a lista completa. Isso vale para:
+- **Quando muda alguém na lista**, o bot responde com o aviso e a lista completa, na mesma mensagem. Isso vale para inscrição, saída, `!add`, `!remover`, `!alterar`, `!pago`, `!naopago`, `!vincular`, nova edição, limpeza e importação.
+- **A lista vai só até o último nome**, sem as linhas "----".
+- **Ajustes de configuração** (`!setdata`, `!sethora`, `!setvalor`, `!vagas`, `!espera`, `!meta`, `!premio…`) respondem **numa linha só**. A exceção é o `!vagas`, quando ele puxa gente da fila de espera.
+- **`!ygo` sem nome** só responde "✍️ Para entrar: *!ygo Seu Nome*", sem lista. Assim o hábito do `!lista` não volta.
+- **`!lista` de quem não é ADM** recebe só a reação 🔒, sem mensagem.
 
-`!participar`, `!sair`, `!eusou`, `!add`, `!alterar`, `!remover`, `!vincular`, `!vagas`, `!espera`, `!meta N`, `!premio1/2/3`, `!limparpremios`, `!settitulo`, `!setdata`, `!sethora`, `!setvalor`, `!setlocal`, `!setbase`, `!criarevento`, `!importarlegado` e `!confirmarlimpeza`.
-
-Exemplo de resposta a um `!participar Caio`:
+Exemplo de resposta a `!ygo Artur`, no layout que o Artur pediu:
 
 ```
-✅ *Caio* está inscrito(a)! Boa sorte! 🍀
+✅ *Artur* inscrito!
 
-🔮 *LIGA MAGIC QB* 🔮
-━━━━━━━━━━━━━━━━━━
-🗓️ *Data:* 01/09/2026
-⏰ *Horário:* 18h30
-💰 *Entrada:* R$ 20,00
-🎁 *Premiação base:* Créditos em loja.
-📍 R. da Hora, 345 - Loja 14 - Espinheiro, Recife - PE, 52020-010
-━━━━━━━━━━━━━━━━━━
-🔥 *META DA SEMANA* 🔥
+📋 Restam 10 vagas
 
-🟨🟨🟨🟨🟨🟨⬜⬜⬜⬜  *56%*
-👥 9/16 jogadores
+🏆 *LIGA QB!*
 
-🚀 Faltam apenas *7 jogadores*!
+🗓️:  18/10/2026
+⏰:  13h30
+💰:  R$ 20,00
+🎁 *PREMIAÇÃO BASE:*
+Créditos em loja.
 
-🥇 Booster Box
-🥈 Não definido
-🥉 Não definido
+📍: R. da Hora, 345 - Loja 14 - Espinheiro, Recife - PE, 52020-010
+------------------------------------------
+🏆 *LISTA DE INSCRITOS (14/24)* 🏆
 
-_⚠️ A meta considera os jogadores presentes na QB GEEK._
-━━━━━━━━━━━━━━━━━━
-📋 *INSCRITOS (9/16)*
-
-1. Ana
-2. Bruno
+1. Mario Henrique
+2. ster super pro player 🦈🦈🦈
 ...
-10. _vaga livre_
+14. Artur
 
-🟢 *7 vagas disponíveis*
-━━━━━━━━━━━━━━━━━━
-✍️ Para entrar: *!participar Seu Nome*
+✍️ Para entrar: *!liga Seu Nome*
 ```
 
 ---
 
-## 4. Emojis e efeitos
+## 5. Pagamentos e quem pode sair sozinho
 
-| Efeito | Quando acontece |
-|--------|-----------------|
-| **Reação na mensagem** do usuário (✅ ⏳ 👋 🚫 🔗 ✏️ 🗑️ 📏 🔥 🥇 🧹 🎉 👑 🏁) | Confirma visualmente a ação sem precisar ler a resposta |
-| **Emoji do jogo** no título (⚡ Pokémon, 🔮 Magic, 🐉 Yu-Gi-Oh!, 🎲 personalizado) | Em toda lista e mensagem do evento |
+- **`!pago 14`** coloca o 🆗 ao lado do nome na posição 14, tenha a pessoa entrado sozinha ou pelo ADM. **`!naopago 14`** desfaz. Na fila de espera: `!pago e1`.
+- **Quem entrou sozinho** (`!ygo Nome`) e não está pago **sai sozinho** com `!sair`.
+- **Quem está pago (🆗) ou foi adicionado pelo ADM (`!add`)** não sai sozinho. O bot responde: "Sua vaga está confirmada pela organização. Para sair, fale com um ADM." Reembolso e troca ficam a critério do ADM.
+- **`!add @pessoa`** vincula a vaga ao WhatsApp da pessoa. Ela continua sem poder sair sozinha, mas é marcada quando subir da fila e não consegue se inscrever duas vezes.
+- **`!vincular nº @pessoa`** (ADM) faz a mesma ligação numa vaga que já existe.
+- O comando `!eusou` (assumir uma vaga criada pelo ADM) **foi removido**, porque deixaria alguém tomar uma vaga paga.
+- **`!sair` com várias listas**: se a pessoa estiver em uma só, `!sair` basta. Se estiver em mais de uma, o bot pergunta: "Você está em ygo e cup. Use *!sair ygo*".
+
+---
+
+## 6. Emojis e efeitos
+
+| Efeito | Quando |
+|--------|--------|
+| **Reação na mensagem** do usuário (✅ ⏳ 🏃 🚫 🆗 ↩️ ✏️ 🗑️ 📏 🔥 🥇 🧹 🆕 🏁 🔒) | Confirma a ação sem gerar mensagem nova |
 | **Marcação (@)** de quem sobe da fila de espera | Quando alguém sai, é removido ou as vagas aumentam |
-| **Mensagem de comemoração** 🎉🎊🎉 | No momento exato em que a meta de jogadores é atingida |
-| **Barra de progresso** 🟥/🟨/🟩 com porcentagem | Na lista e no `!meta` |
-| **"Essa foi a última vaga — lista completa!"** e 🔒 *Vagas esgotadas* | Quando a lista principal lota |
-| **🟢 X vagas disponíveis** | Enquanto houver vaga |
-| **Marcação silenciosa** de todos | `!todos [mensagem]`: notifica todos sem encher o texto de @nomes |
+| **"🎉🎊 META ATINGIDA!"** | No momento em que a meta é batida, **na mesma resposta** (sem mensagem extra) |
+| **"🔒 Essa foi a última vaga, lista completa!"** | Quando a lista principal lota |
+| **🆗 ao lado do nome** | Jogadores marcados com `!pago` |
+| **Marcação silenciosa de todos** | `!todos [mensagem]` notifica todos sem encher o texto de @nomes |
 
 ---
 
-## 5. Pessoas adicionadas pelo ADM podem se remover?
-
-**Antes: não.** O `!add` guardava um ID inventado (`ADM_1788287983093`) e o `!sair` procura a pessoa pelo ID real do WhatsApp, então os dois nunca batiam.
-
-**Agora: sim.** Há três caminhos:
-
-1. **`!add @pessoa`** (recomendado): o ADM marca a pessoa no lugar de digitar o nome. A vaga já nasce vinculada ao WhatsApp dela e ela pode usar `!sair` normalmente. O nome vem do perfil do WhatsApp ou pode ser informado: `!add @pessoa Nome`.
-2. **`!eusou [nº]`** (o jogador faz sozinho): se o ADM usou `!add Nome` sem marcar, a própria pessoa envia `!eusou 3` (ou `!eusou e1` na fila de espera) para assumir a vaga. Depois disso, `!sair` funciona. O bot sugere esse comando automaticamente ao adicionar alguém sem marcação.
-3. **`!vincular [nº] @pessoa`** (o ADM faz): liga uma vaga existente a uma pessoa. Serve para corrigir vínculos ou para quem não sabe usar o `!eusou`.
-
-**Proteções:**
-- O `!eusou` só funciona em vagas **sem dono**. Vagas já vinculadas exigem um ADM.
-- Ninguém pode ocupar duas posições.
-- O bot anuncia no grupo, marcando a pessoa, quem assumiu qual vaga. Assim, um uso indevido fica visível e o ADM pode corrigir com `!vincular`.
-
-> Os 14 inscritos da lista atual foram todos adicionados por `!add`. Depois da importação (seção 7), cada um pode enviar `!eusou [nº]` para poder sair sozinho.
-
----
-
-## 6. Referência de comandos
+## 7. Referência de comandos
 
 ### Jogadores
 
 | Comando | Descrição |
 |---------|-----------|
-| `!participar [Nome]` | Entra na lista (ou na fila de espera). Sem nome, usa o nome do perfil do WhatsApp |
-| `!lista` | Mostra a lista atual |
-| `!sair` | Sai da lista; o primeiro da espera sobe |
-| `!eusou [nº]` | **Novo.** Assume uma vaga criada por ADM (`!eusou 3`, `!eusou e1`) |
-| `!meta` | Mostra o desafio de premiação |
-| `!id` | Mostra o seu ID |
-| `!ajuda` / `!comandos` | Menu (ADMs veem os comandos extras) |
+| `!<lista> Seu Nome` | Entra na lista (ex.: `!ygo Lucas Chagas`). O comando aparece no fim de cada lista |
+| `!sair [lista]` | Sai da lista; o nome da lista só é necessário se a pessoa estiver em mais de uma |
+| `!meta [lista]` | Desafio da premiação |
+| `!neymar` / `!ajudaney` | Menu de comandos (ADMs veem a parte de ADM) |
 
-### ADM: eventos
+### ADM: listas
 
 | Comando | Descrição |
 |---------|-----------|
-| `!criarevento [pokemon \| magic \| yugioh \| nome livre]` | **Novo.** Cria o evento do grupo |
-| `!encerrarevento` → `!confirmarencerramento` | **Novo.** Encerra o evento do grupo |
-| `!eventos` | **Novo.** Eventos ativos em todos os grupos |
-| `!importarlegado [tipo]` | **Novo.** Importa a lista da versão antiga |
+| `!lista #nome data hora vagas reservas [valor]` | Cria a lista; se já existir, abre uma nova edição (pede `!confirmar`) |
+| `!lista #nome` | Mostra a lista (cria vazia se não existir) |
+| `!lista` | Mostra a lista do grupo, ou o resumo se houver várias |
+| `!listas` | Listas abertas do grupo; no privado do bot, de todos os grupos |
+| `!limparlista [lista]` | Zera inscritos, data, hora, meta e prêmios (pede `!confirmar`) |
+| `!excluirlista [lista]` | Apaga a lista e o comando dela (pede `!confirmar`) |
+| `!confirmar` | Confirma a ação pendente (válido por 2 min). `!confirmarlimpeza` também funciona |
+| `!importarlegado #nome` | Importa a lista da versão antiga |
+| `!todos [mensagem]` | Marca todos do grupo |
 
-### ADM: configuração
-
-| Comando | Descrição |
-|---------|-----------|
-| `!settitulo [título]` | **Novo.** Título do evento |
-| `!setdata [data]` | Data |
-| `!sethora [hora]` | Horário |
-| `!setvalor [valor]` | Valor de entrada (aceita com ou sem "R$") |
-| `!setlocal [endereço]` | **Novo.** Local (padrão: endereço da loja) |
-| `!setbase [texto]` | **Novo.** Premiação base (padrão: "Créditos em loja.") |
-| `!vagas [nº]` | Vagas; ao aumentar, a fila de espera sobe |
-| `!espera [nº]` | Tamanho da fila de espera |
-| `!meta [nº]` | Meta de jogadores (`0` desativa) |
-| `!premio1/2/3 [prêmio]` | Prêmios da meta |
-| `!limparpremios` | Apaga os prêmios |
-
-### ADM: lista
+### ADM: ajustes (`[lista]` é opcional se o grupo tiver uma lista só)
 
 | Comando | Descrição |
 |---------|-----------|
-| `!add [Nome]` / `!add @pessoa [Nome]` | Adiciona alguém; com @ a pessoa pode sair sozinha |
-| `!alterar [nº] [Nome]` | Renomeia (`e1` para a fila de espera) |
-| `!remover [nº]` | Remove (`e1` para a fila de espera) |
-| `!vincular [nº] @pessoa` | **Novo.** Liga uma vaga a uma pessoa |
-| `!limparlista` → `!confirmarlimpeza` | Reinicia o evento (confirmação válida por 2 min) |
-| `!todos [mensagem]` | Marca todos do grupo (estava quebrado, corrigido) |
+| `!setdata [lista] data` | Data |
+| `!sethora [lista] hora` | Horário |
+| `!setvalor [lista] valor` | Valor (aceita com ou sem "R$") |
+| `!settitulo [lista] título` | Título exibido no topo (padrão: nome da lista em maiúsculas) |
+| `!setlocal [lista] endereço` | Local (padrão: endereço da loja) |
+| `!setbase [lista] texto` | Premiação base (padrão: "Créditos em loja.") |
+| `!vagas [lista] nº` | Vagas; ao aumentar, a fila de espera sobe |
+| `!espera [lista] nº` | Reservas (fila de espera) |
+| `!meta [lista] nº` | Meta de jogadores (`0` desativa) |
+| `!premio1/2/3 [lista] prêmio` | Prêmios da meta |
+| `!limparpremios [lista]` | Apaga os prêmios |
 
-### ADM: permissões
+### ADM: jogadores
 
 | Comando | Descrição |
 |---------|-----------|
-| `!addadm [ID, número ou @pessoa]` | Adiciona ADM (agora aceita marcação e número de telefone) |
+| `!add [lista] Nome` / `!add [lista] @pessoa [Nome]` | Adiciona alguém (não sai sozinho) |
+| `!pago [lista] nº` / `!naopago [lista] nº` | Marca ou desmarca o 🆗 |
+| `!alterar [lista] nº Nome` | Renomeia |
+| `!remover [lista] nº` | Remove; o primeiro da espera sobe |
+| `!vincular [lista] nº @pessoa` | Liga uma vaga ao WhatsApp da pessoa |
+
+Use `e1`, `e2`… para posições da fila de espera.
+
+### ADM: permissões (fora do menu: `!id`)
+
+| Comando | Descrição |
+|---------|-----------|
+| `!addadm [ID, número ou @pessoa]` | Adiciona ADM |
 | `!deladm [ID, número ou @pessoa]` | Remove ADM |
-| `!admins` | **Novo.** Lista os ADMs |
+| `!admins` | Lista os ADMs |
+| `!id [@pessoa]` | Mostra um ID (não aparece no menu) |
 
 > O **número do bot** é sempre ADM. Use-o para cadastrar os primeiros ADMs: `!addadm @pessoa`.
 
+### Comandos removidos
+
+| Antes | Agora |
+|-------|-------|
+| `!ajuda`, `!comandos` | `!neymar`, `!ajudaney` |
+| `!participar Nome` | `!<lista> Nome` |
+| `!lista` (público) | Só ADM (`!lista #nome`) |
+| `!confirmarlimpeza` | `!confirmar` (o antigo continua funcionando) |
+
 ---
 
-## 7. Como atualizar o servidor
+## 8. Como atualizar o servidor
 
 > ⚠️ **Faça backup antes.** O arquivo `dados_campeonato.json` saiu do git. Dependendo do estado do servidor, o `git` pode apagá-lo ou se recusar a atualizar.
 
@@ -263,61 +291,63 @@ _⚠️ A meta considera os jogadores presentes na QB GEEK._
    ```
    - Se o git reclamar de alterações locais em `dados_campeonato.json`, mova o arquivo para fora da pasta, rode o `checkout` e traga-o de volta.
    - Se o arquivo sumir depois do `checkout`, restaure a cópia do backup.
-4. `npm install` (não há dependências novas; só garante que está tudo instalado).
-5. Inicie com `npm start` (ou `node index.js`). A sessão do WhatsApp (`.wwebjs_auth/`) é mantida, então **não é preciso ler o QR code de novo**.
-6. **No grupo do campeonato atual**, um ADM envia:
-   - `!importarlegado pokemon`: importa como ⚡ LIGA POKÉMON QB; ou
-   - `!importarlegado`: importa mantendo o nome antigo, 🏆 LIGA QB.
-
-   O arquivo antigo é renomeado para `dados_campeonato.importado-<data>.json`, que fica como backup.
-7. Nos outros grupos, crie os eventos com `!criarevento magic`, `!criarevento yugioh` etc.
-
-Os ADMs do `config.json` atual continuam valendo.
+4. `npm install`
+5. `npm start`. A sessão do WhatsApp (`.wwebjs_auth/`) é mantida, então não é preciso ler o QR code de novo.
+6. **No grupo da lista atual**, um ADM envia `!importarlegado #liga` (troque `liga` pelo nome que a galera vai usar para se inscrever). O título "LIGA QB" é mantido, e quem tinha 🆗 no nome fica marcado como pago. O arquivo antigo vira `dados_campeonato.importado-<data>.json`, como backup.
+7. Crie as outras listas com `!lista #nome data hora vagas reservas valor`.
 
 ---
 
-## 8. Arquivos alterados
+## 9. Arquivos alterados
 
 ### Novos
 
 | Arquivo | Função |
 |---------|--------|
+| [comandos/gestao.js](comandos/gestao.js) | `!lista`, `!listas`, `!limparlista`, `!excluirlista`, `!confirmar`, `!importarlegado` |
 | [comandos/admins.js](comandos/admins.js) | `!addadm`, `!deladm`, `!admins` (saíram do `index.js`) |
-| [comandos/evento.js](comandos/evento.js) | Criar, encerrar, listar e importar eventos |
-| [utils/eventos.js](utils/eventos.js) | Leitura e gravação de `dados/eventos.json` (substitui `utils/dados.js`) |
-| [utils/tiposEvento.js](utils/tiposEvento.js) | Tipos de evento (Pokémon, Magic, Yu-Gi-Oh!) e dados da loja |
-| [utils/identidade.js](utils/identidade.js) | Resolução de IDs `@c.us`/`@lid`, menções, nome do perfil |
-| [utils/listas.js](utils/listas.js) | Adicionar, remover, promover da espera, posições (`3`, `e1`) |
-| [utils/formatacao.js](utils/formatacao.js) | Montagem da lista e textos comuns |
-| [utils/efeitos.js](utils/efeitos.js) | Marcação de promovidos e comemoração da meta |
-| [utils/confirmacoes.js](utils/confirmacoes.js) | Confirmações com prazo, por grupo |
-| [utils/arquivoJson.js](utils/arquivoJson.js) | Leitura com backup de arquivo corrompido e gravação segura |
-| `ALTERACOES.md` | Este documento |
+| [utils/grupos.js](utils/grupos.js) | Leitura e gravação de `dados/listas.json` (substitui `utils/dados.js`) |
+| [utils/loja.js](utils/loja.js) | Endereço e premiação base padrão da loja |
+| [utils/identidade.js](utils/identidade.js) | IDs `@c.us`/`@lid`, menções, nome do perfil |
+| [utils/listas.js](utils/listas.js) | Adicionar, remover, promover da espera, quem pode sair, posições (`3`, `e1`) |
+| [utils/formatacao.js](utils/formatacao.js) | Texto da lista no layout original |
+| [utils/efeitos.js](utils/efeitos.js) | Marcação de promovidos e aviso de meta |
+| [utils/confirmacoes.js](utils/confirmacoes.js) | `!confirmar` com prazo, por grupo |
+| [utils/arquivoJson.js](utils/arquivoJson.js) | Leitura com backup e gravação segura |
+| `README.md`, `ALTERACOES.md` | Documentação |
 
 ### Reescritos ou alterados
 
 | Arquivo | O que mudou |
 |---------|-------------|
-| [index.js](index.js) | Ficou só com a inicialização do WhatsApp; código duplicado e quebrado removido; tratamento de erro por mensagem |
-| [comandos/index.js](comandos/index.js) | Roteador baseado em tabela, com checagem de ADM, grupo e evento **antes** de executar |
-| Todos os arquivos em [comandos/](comandos/) | Recebem o contexto do grupo (`ctx`), respondem com a lista atualizada e usam reações |
-| [utils/config.js](utils/config.js) | Caminho absoluto, leitura segura, função `ehAdmin` |
-| [utils/barraMeta.js](utils/barraMeta.js) | Retorno consistente quando não há meta |
-| [package.json](package.json) | Script `npm start` e descrição |
+| [index.js](index.js) | Só inicia o WhatsApp; código duplicado removido; tratamento de erro por mensagem |
+| [comandos/index.js](comandos/index.js) | Tabela de comandos, checagem de ADM e grupo antes de executar, listas como comandos dinâmicos |
+| [comandos/ajuda.js](comandos/ajuda.js) | Menu `!neymar`, dividido, sem `!id` |
+| [comandos/participar.js](comandos/participar.js) | Chamado pelo comando da lista (`!ygo Nome`) |
+| [comandos/sair.js](comandos/sair.js) | Escolhe a lista; bloqueia vaga paga ou adicionada pelo ADM |
+| [comandos/gerenciarLista.js](comandos/gerenciarLista.js) | Novos `!pago` / `!naopago`; `e1` para a espera |
+| Demais arquivos em [comandos/](comandos/) | Recebem a lista escolhida (`ctx.lista`); ajustes respondem numa linha |
+| [utils/config.js](utils/config.js) | Caminho absoluto, leitura segura, `ehAdmin` |
+| [utils/barraMeta.js](utils/barraMeta.js) | Retorno consistente sem meta |
+| [package.json](package.json) | Script `npm start` |
 | [.gitignore](.gitignore) | Ignora `dados/` e `dados_campeonato*.json` |
 
 ### Removidos
 
 | Arquivo | Motivo |
 |---------|--------|
-| `utils/dados.js` | Substituído por `utils/eventos.js` |
-| `dados_campeonato.json` | Removido **apenas do git** (dados pessoais). Continua existindo no servidor até ser importado |
+| `comandos/lista.js` | `!lista` público removido; virou `!lista #nome` em `gestao.js` |
+| `comandos/limpeza.js` | Incorporado a `gestao.js` |
+| `utils/dados.js` | Substituído por `utils/grupos.js` |
+| `dados_campeonato.json` | Removido **apenas do git**. Continua no servidor até ser importado |
 
 ---
 
-## 9. Pontos de atenção
+## 10. Pontos de atenção
 
-- **Confirmações pendentes** (`!limparlista`, `!encerrarevento`) ficam só na memória: se o bot reiniciar, é preciso pedir de novo.
-- **`!eusou` depende de boa-fé**: qualquer pessoa pode assumir uma vaga **sem dono**. O anúncio público com marcação torna o abuso visível e o ADM corrige com `!vincular`. Para eliminar o risco, use sempre `!add @pessoa`.
-- **`!id` em grupos** mostra o ID como o WhatsApp o exibe naquele grupo (normalmente `@lid`, que não expõe o telefone). `!admins` lista os IDs cadastrados, que podem conter números de telefone; use de preferência no privado do bot.
-- O bot continua usando o **whatsapp-web.js** (WhatsApp Web não oficial). Mudanças do WhatsApp podem exigir atualizar a biblioteca.
+- **A hora não pode ter espaço** no comando único (`10h00AM`, não `10h00 AM`), porque o espaço separa os campos. Para hora com espaço, crie a lista e ajuste com `!sethora ygo 10h00 AM`.
+- **`!add` com nome igual ao de uma lista**: em `!add cup Head`, a palavra "cup" é lida como o nome da lista. É raro; nesse caso use `!add cup Cup Head`.
+- **Confirmações pendentes** (`!confirmar`) ficam só na memória: se o bot reiniciar, é preciso pedir de novo.
+- **`!admins`** lista os IDs cadastrados, que podem conter números de telefone. Use de preferência no privado do bot.
+- O bot usa o **whatsapp-web.js** (WhatsApp Web não oficial). Mudanças do WhatsApp podem exigir atualizar a biblioteca.
+- Esta versão foi testada com mensagens simuladas, **não conectada ao WhatsApp real**. Faça um teste em um grupo antes de liberar.

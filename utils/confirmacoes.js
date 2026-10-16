@@ -1,4 +1,4 @@
-// Ações perigosas (limpar lista, encerrar evento) pedem confirmação.
+// Ações que apagam dados (limpar, recomeçar ou excluir lista) pedem !confirmar.
 // A confirmação vale só para o grupo onde foi pedida e expira sozinha.
 
 const VALIDADE_MS = 2 * 60 * 1000;
@@ -6,32 +6,33 @@ const VALIDADE_MS = 2 * 60 * 1000;
 const pendentes = new Map();
 
 
-function solicitarConfirmacao(chatId, acao) {
+// pendente: { acao, chave, campos? }
+function solicitarConfirmacao(chatId, pendente) {
 
     pendentes.set(chatId, {
-        acao,
+        ...pendente,
         expiraEm: Date.now() + VALIDADE_MS
     });
 
 }
 
 
-function confirmar(chatId, acao) {
+function retirarConfirmacao(chatId) {
 
     const pendente = pendentes.get(chatId);
 
-    if (!pendente || pendente.acao !== acao || pendente.expiraEm < Date.now()) {
-        return false;
-    }
-
     pendentes.delete(chatId);
 
-    return true;
+    if (!pendente || pendente.expiraEm < Date.now()) {
+        return null;
+    }
+
+    return pendente;
 
 }
 
 
 module.exports = {
     solicitarConfirmacao,
-    confirmar
+    retirarConfirmacao
 };

@@ -28,15 +28,15 @@ Passo a passo:
 
 ## 2️⃣ IMPORTE A LISTA ANTIGA
 
-> ### No grupo do campeonato atual, um ADM envia:
+> ### No grupo da lista atual, um ADM envia:
 >
-> # `!importarlegado pokemon`
+> # `!importarlegado #liga`
 >
-> ### (ou `!importarlegado` para manter o nome antigo, 🏆 LIGA QB)
+> ### Troque `liga` pelo nome que a galera vai usar para se inscrever (`!liga Nome`).
 
-Isso traz os inscritos atuais para o novo formato. O arquivo antigo é renomeado para `dados_campeonato.importado-<data>.json`, que fica como backup.
+Isso traz os inscritos atuais para o novo formato e mantém o título 🏆 LIGA QB. Quem tinha 🆗 no nome fica marcado como pago. O arquivo antigo é renomeado para `dados_campeonato.importado-<data>.json`, que fica como backup.
 
-Os inscritos atuais foram adicionados por ADM. Cada um pode enviar **`!eusou [nº]`** para conseguir sair sozinho depois.
+Quem foi adicionado por ADM ou está pago **não sai sozinho**: só um ADM remove, com `!remover nº`.
 
 ## 3️⃣ ADMs
 
@@ -50,11 +50,26 @@ Os ADMs que já estão no `config.json` continuam valendo.
 > ### Esta versão foi testada com mensagens simuladas, **NÃO conectada ao WhatsApp real**.
 > ### Faça um teste rápido em um grupo antes de divulgar.
 
+## 5️⃣ AVISE A GALERA QUE OS COMANDOS MUDARAM
+
+> # 🔁 `!participar`, `!lista`, `!ajuda` e `!comandos` DEIXARAM DE EXISTIR
+>
+> ### Antes de liberar, mande no grupo algo como:
+>
+> ### *"Agora pra entrar na lista é `!liga Seu Nome`. A lista aparece atualizada sempre que alguém entra ou sai."*
+
+| Antes | Agora |
+|-------|-------|
+| `!participar Nome` | `!<nome da lista> Nome` (ex.: `!ygo Lucas`) |
+| `!lista` | Só ADM: `!lista #ygo` |
+| `!ajuda` / `!comandos` | `!neymar` / `!ajudaney` |
+| `!limparlista` + `!setdata` + `!sethora` + `!vagas` | `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00` |
+
 ---
 
 # 🤖 Bot QB Geek
 
-Bot de WhatsApp da QB Geek para listas de inscrição de eventos: Pokémon, Magic, Yu-Gi-Oh! ou qualquer outro. Cada grupo do WhatsApp pode ter o seu evento, todos rodando ao mesmo tempo.
+Bot de WhatsApp da QB Geek para listas de inscrição: Yu-Gi-Oh!, Pokémon, Magic ou qualquer outro evento. O ADM cria listas com o nome que quiser (`#ygo`, `#cup`, `#glc`…), e cada nome vira o comando de inscrição (`!ygo Nome`). Cada grupo pode ter várias listas ao mesmo tempo.
 
 ## Stack
 
@@ -62,7 +77,7 @@ Bot de WhatsApp da QB Geek para listas de inscrição de eventos: Pokémon, Magi
 - **[whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)**: controla o WhatsApp Web por um Chrome invisível (Puppeteer)
 - **qrcode-terminal**: QR code de login no terminal
 - **Arquivos JSON** como banco de dados:
-  - `dados/eventos.json`: eventos por grupo
+  - `dados/listas.json`: listas de cada grupo
   - `config.json`: ADMs
 
   Os dois ficam fora do git.
@@ -80,11 +95,12 @@ Na primeira vez, escaneie o QR code com o WhatsApp do número do bot.
 
 | Quem | Comando | O que faz |
 |------|---------|-----------|
-| ADM | `!criarevento magic` | Cria o evento no grupo (`pokemon`, `magic`, `yugioh` ou nome livre) |
-| ADM | `!vagas 16` / `!espera 4` | Abre as inscrições |
-| Jogador | `!participar Nome` | Entra na lista |
+| ADM | `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00` | Cria a lista (data, hora, vagas, reservas, valor); se já existir, abre nova edição |
+| ADM | `!pago ygo 14` | Coloca o 🆗 no nº 14 |
+| ADM | `!vagas ygo 28` | Ajusta as vagas (o nome da lista é opcional se o grupo tiver só uma) |
+| Jogador | `!ygo Nome` | Entra na lista e recebe a lista atualizada |
 | Jogador | `!sair` | Sai da lista |
-| Todos | `!ajuda` | Lista todos os comandos |
+| Todos | `!neymar` | Menu de comandos |
 
 A referência completa de comandos e todas as alterações desta versão estão em **[ALTERACOES.md](ALTERACOES.md)**.
 
@@ -92,7 +108,8 @@ A referência completa de comandos e todas as alterações desta versão estão 
 
 ```
 index.js            # inicia o WhatsApp e repassa as mensagens
-comandos/index.js   # tabela de comandos + checagem de ADM/grupo/evento
+comandos/index.js   # tabela de comandos, checagem de ADM e listas como comandos (!ygo)
+comandos/gestao.js  # criar, recomeçar, limpar e excluir listas
 comandos/*.js       # um arquivo por assunto (participar, sair, vagas...)
-utils/              # dados, tipos de evento, listas, formatação, efeitos
+utils/              # dados, jogadores, formatação da lista, efeitos
 ```

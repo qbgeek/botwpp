@@ -1,5 +1,4 @@
 const { mencionar } = require('./identidade');
-const { linhasPremios } = require('./formatacao');
 
 
 // Aviso de quem saiu da fila de espera, marcando a pessoa quando possível
@@ -32,35 +31,22 @@ function anunciarPromovidos(promovidos) {
 }
 
 
-// Mensagem extra de comemoração no momento exato em que a meta é batida
-async function celebrarMeta(ctx, inscritosAntes) {
+// Comemoração no momento exato em que a meta é batida.
+// Vai junto na mesma resposta, sem mensagem extra.
+function anunciarMeta(lista, inscritosAntes) {
 
-    const { evento } = ctx;
+    const meta = lista.metaPremiacao;
 
-    const meta = evento.metaPremiacao;
-    const agora = evento.inscritos.length;
-
-    if (meta <= 0 || inscritosAntes >= meta || agora < meta) {
-        return;
+    if (meta <= 0 || inscritosAntes >= meta || lista.inscritos.length < meta) {
+        return '';
     }
 
-    const texto = [
-        `🎉🎊🎉 *META ATINGIDA!* 🎉🎊🎉`,
-        '',
-        `${evento.emoji} A *${evento.titulo}* chegou a *${meta} jogadores*!`,
-        '',
-        `🎁 *Premiação especial liberada:*`,
-        ...linhasPremios(evento),
-        '',
-        `🔥 Bora pra cima!`
-    ].join('\n');
-
-    await ctx.client.sendMessage(ctx.chatId, texto);
+    return `\n\n🎉🎊 *META ATINGIDA!* A lista chegou a *${meta} jogadores* e a premiação especial foi liberada! 🥇🥈🥉`;
 
 }
 
 
 module.exports = {
     anunciarPromovidos,
-    celebrarMeta
+    anunciarMeta
 };

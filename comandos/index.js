@@ -1,8 +1,7 @@
 const ajuda = require('./ajuda');
 const id = require('./id');
 const admins = require('./admins');
-const evento = require('./evento');
-const lista = require('./lista');
+const gestao = require('./gestao');
 const participar = require('./participar');
 const sair = require('./sair');
 const add = require('./add');
@@ -11,10 +10,15 @@ const configuracao = require('./configuracao');
 const vagas = require('./vagas');
 const meta = require('./meta');
 const premios = require('./premios');
-const limpeza = require('./limpeza');
 const todos = require('./todos');
 
-const { obterEvento, salvarEventos } = require('../utils/eventos');
+const {
+    normalizarChave,
+    listasDoGrupo,
+    obterLista,
+    salvarListas
+} = require('../utils/grupos');
+
 const { ehAdmin } = require('../utils/config');
 const { resolverIds } = require('../utils/identidade');
 const { montarLista } = require('../utils/formatacao');
@@ -25,47 +29,52 @@ const { montarLista } = require('../utils/formatacao');
 // escopo:
 //   global -> funciona em qualquer conversa
 //   grupo  -> só dentro de grupos
-//   evento -> só em grupos com evento ativo
+//   lista  -> só em grupos com lista; a lista é o 1º argumento
+//             (opcional quando o grupo tem uma lista só)
 // admin: true -> exclusivo para ADMs (checado AQUI, antes de executar)
+//
+// As listas criadas pelo ADM viram comandos sozinhas: a lista "ygo"
+// responde a "!ygo Nome" (veja o final de executarComando).
 // =========================================================
 
 const COMANDOS = [
 
     // --- Públicos ---
-    { nomes: ['!ajuda', '!comandos'], escopo: 'global', executar: ajuda },
-    { nomes: ['!id'], escopo: 'global', executar: id },
-    { nomes: ['!lista'], escopo: 'evento', executar: lista },
-    { nomes: ['!participar'], escopo: 'evento', executar: participar },
-    { nomes: ['!sair'], escopo: 'evento', executar: sair },
-    { nomes: ['!eusou'], escopo: 'evento', executar: gerenciarLista.euSou },
+    { nomes: ['!neymar', '!ajudaney'], escopo: 'global', executar: ajuda },
+    { nomes: ['!sair'], escopo: 'grupo', executar: sair },
     // "!meta" é público; "!meta N" é verificado como ADM dentro do comando
-    { nomes: ['!meta'], escopo: 'evento', executar: meta },
+    { nomes: ['!meta'], escopo: 'lista', executar: meta },
 
-    // --- ADM: eventos e permissões ---
-    { nomes: ['!eventos'], escopo: 'global', admin: true, executar: evento.listar },
+    // --- ADM: listas ---
+    // "!lista" sem permissão só recebe uma reação, para não virar spam
+    { nomes: ['!lista'], escopo: 'grupo', admin: true, negarComReacao: true, executar: gestao.lista },
+    { nomes: ['!listas'], escopo: 'global', admin: true, executar: gestao.listar },
+    { nomes: ['!limparlista'], escopo: 'lista', admin: true, executar: gestao.limpar },
+    { nomes: ['!excluirlista'], escopo: 'lista', admin: true, executar: gestao.excluir },
+    { nomes: ['!confirmar', '!confirmarlimpeza'], escopo: 'grupo', admin: true, executar: gestao.confirmar },
+    { nomes: ['!importarlegado'], escopo: 'grupo', admin: true, executar: gestao.importarLegado },
+    { nomes: ['!todos'], escopo: 'grupo', admin: true, executar: todos },
+
+    // --- ADM: configuração da lista ---
+    { nomes: configuracao.COMANDOS, escopo: 'lista', admin: true, executar: configuracao },
+    { nomes: ['!vagas'], escopo: 'lista', admin: true, executar: vagas.vagas },
+    { nomes: ['!espera'], escopo: 'lista', admin: true, executar: vagas.espera },
+    { nomes: ['!premio1', '!premio2', '!premio3'], escopo: 'lista', admin: true, executar: premios.definir },
+    { nomes: ['!limparpremios'], escopo: 'lista', admin: true, executar: premios.limpar },
+
+    // --- ADM: jogadores ---
+    { nomes: ['!add'], escopo: 'lista', admin: true, executar: add },
+    { nomes: ['!pago'], escopo: 'lista', admin: true, executar: gerenciarLista.pago },
+    { nomes: ['!naopago'], escopo: 'lista', admin: true, executar: gerenciarLista.naoPago },
+    { nomes: ['!alterar'], escopo: 'lista', admin: true, executar: gerenciarLista.alterar },
+    { nomes: ['!remover'], escopo: 'lista', admin: true, executar: gerenciarLista.remover },
+    { nomes: ['!vincular'], escopo: 'lista', admin: true, executar: gerenciarLista.vincular },
+
+    // --- ADM: permissões ---
+    { nomes: ['!id'], escopo: 'global', admin: true, executar: id },
     { nomes: ['!admins'], escopo: 'global', admin: true, executar: admins.listar },
     { nomes: ['!addadm'], escopo: 'global', admin: true, executar: admins.adicionar },
-    { nomes: ['!deladm'], escopo: 'global', admin: true, executar: admins.remover },
-    { nomes: ['!criarevento'], escopo: 'grupo', admin: true, executar: evento.criar },
-    { nomes: ['!importarlegado'], escopo: 'grupo', admin: true, executar: evento.importarLegado },
-    { nomes: ['!todos'], escopo: 'grupo', admin: true, executar: todos },
-    { nomes: ['!encerrarevento'], escopo: 'evento', admin: true, executar: evento.encerrar },
-    { nomes: ['!confirmarencerramento'], escopo: 'evento', admin: true, executar: evento.confirmarEncerramento },
-
-    // --- ADM: configuração do evento ---
-    { nomes: configuracao.COMANDOS, escopo: 'evento', admin: true, executar: configuracao },
-    { nomes: ['!vagas'], escopo: 'evento', admin: true, executar: vagas.vagas },
-    { nomes: ['!espera'], escopo: 'evento', admin: true, executar: vagas.espera },
-    { nomes: ['!premio1', '!premio2', '!premio3'], escopo: 'evento', admin: true, executar: premios.definir },
-    { nomes: ['!limparpremios'], escopo: 'evento', admin: true, executar: premios.limpar },
-
-    // --- ADM: lista ---
-    { nomes: ['!add'], escopo: 'evento', admin: true, executar: add },
-    { nomes: ['!alterar'], escopo: 'evento', admin: true, executar: gerenciarLista.alterar },
-    { nomes: ['!remover'], escopo: 'evento', admin: true, executar: gerenciarLista.remover },
-    { nomes: ['!vincular'], escopo: 'evento', admin: true, executar: gerenciarLista.vincular },
-    { nomes: ['!limparlista'], escopo: 'evento', admin: true, executar: limpeza.solicitar },
-    { nomes: ['!confirmarlimpeza'], escopo: 'evento', admin: true, executar: limpeza.confirmar }
+    { nomes: ['!deladm'], escopo: 'global', admin: true, executar: admins.remover }
 
 ];
 
@@ -76,6 +85,37 @@ for (const comando of COMANDOS) {
 }
 
 
+// Impede criar uma lista com o nome de um comando do bot
+function comandoExiste(nome) {
+
+    return MAPA.has(`!${nome}`);
+
+}
+
+
+// Descobre a lista pelo 1º argumento ("ygo" ou "#ygo").
+// Se o grupo tiver uma lista só, o nome pode ser omitido.
+function resolverLista(chatId, args) {
+
+    const [primeira] = args.split(/\s+/, 1);
+
+    const pelaPrimeira = primeira ? obterLista(chatId, normalizarChave(primeira)) : null;
+
+    if (pelaPrimeira) {
+        return { lista: pelaPrimeira, args: args.slice(primeira.length).trim() };
+    }
+
+    const listas = Object.values(listasDoGrupo(chatId));
+
+    if (listas.length === 1) {
+        return { lista: listas[0], args };
+    }
+
+    return { lista: null, listas };
+
+}
+
+
 function criarContexto(msg, client, dados) {
 
     const ctx = {
@@ -83,16 +123,17 @@ function criarContexto(msg, client, dados) {
         client,
         ...dados,
 
-        salvar: salvarEventos,
+        comandoExiste,
+        salvar: salvarListas,
 
         responder(texto, opcoes = {}) {
             return msg.reply(texto, undefined, opcoes);
         },
 
-        // Toda alteração de lista responde com a lista atualizada
+        // Mudou alguém na lista -> responde com a lista atualizada
         responderComLista(cabecalho, mencoes = []) {
             return msg.reply(
-                `${cabecalho}\n\n${montarLista(ctx.evento)}`,
+                `${cabecalho}\n\n${montarLista(ctx.lista)}`,
                 undefined,
                 { mentions: mencoes }
             );
@@ -122,15 +163,20 @@ module.exports = async function executarComando(msg, client) {
 
     const [palavra] = texto.split(/\s+/, 1);
     const nome = palavra.toLowerCase();
-
-    const comando = MAPA.get(nome);
-
-    if (!comando) {
-        return;
-    }
+    const args = texto.slice(palavra.length).trim();
 
     const chatId = msg.fromMe ? msg.to : msg.from;
     const ehGrupo = chatId.endsWith('@g.us');
+
+    const comando = MAPA.get(nome);
+
+    // Não é um comando fixo: pode ser o nome de uma lista do grupo (!ygo Nome)
+    const listaDinamica =
+        !comando && ehGrupo ? obterLista(chatId, normalizarChave(nome)) : null;
+
+    if (!comando && !listaDinamica) {
+        return;
+    }
 
     const idUsuario = msg.author || msg.from;
     const idsUsuario = await resolverIds(client, idUsuario);
@@ -138,37 +184,56 @@ module.exports = async function executarComando(msg, client) {
     // O próprio número do bot é sempre ADM (permite cadastrar o primeiro ADM)
     const ehAdm = msg.fromMe || ehAdmin(idsUsuario);
 
+    const dados = { nome, args, chatId, ehGrupo, idUsuario, idsUsuario, ehAdm, lista: null };
+
+    if (listaDinamica) {
+        return participar(criarContexto(msg, client, { ...dados, lista: listaDinamica }));
+    }
+
     if (comando.admin && !ehAdm) {
+
+        if (comando.negarComReacao) {
+            return msg.react('🔒').catch(() => {});
+        }
+
         return msg.reply('🔒 Acesso negado. Esse comando é exclusivo para ADMs.');
+
     }
 
     if (comando.escopo !== 'global' && !ehGrupo) {
         return msg.reply('⚠️ Esse comando só funciona dentro de um grupo.');
     }
 
-    const evento = ehGrupo ? obterEvento(chatId) : null;
+    if (comando.escopo === 'lista') {
 
-    if (comando.escopo === 'evento' && !evento) {
+        const resolvido = resolverLista(chatId, args);
 
-        return msg.reply(
-            ehAdm
-                ? '⚠️ Este grupo ainda não tem evento.\n\nCrie um com *!criarevento pokemon*, *!criarevento magic* ou *!criarevento yugioh*.'
-                : '⚠️ Não há evento ativo neste grupo no momento.'
-        );
+        if (!resolvido.lista) {
+
+            if (resolvido.listas.length === 0) {
+
+                return msg.reply(
+                    ehAdm
+                        ? '⚠️ Este grupo ainda não tem lista.\n\nCrie com: *!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00*'
+                        : '⚠️ Não há listas abertas neste grupo.'
+                );
+
+            }
+
+            const nomes = resolvido.listas.map(l => `*${l.comando}*`).join(', ');
+
+            return msg.reply(
+                `🤔 Qual lista? Este grupo tem: ${nomes}.\n\n` +
+                `Exemplo: *${nome} ${resolvido.listas[0].comando} ...*`
+            );
+
+        }
+
+        dados.lista = resolvido.lista;
+        dados.args = resolvido.args;
 
     }
 
-    const ctx = criarContexto(msg, client, {
-        nome,
-        args: texto.slice(palavra.length).trim(),
-        chatId,
-        ehGrupo,
-        idUsuario,
-        idsUsuario,
-        ehAdm,
-        evento
-    });
-
-    await comando.executar(ctx);
+    await comando.executar(criarContexto(msg, client, dados));
 
 };

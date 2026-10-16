@@ -5,10 +5,8 @@ module.exports = async function todos(ctx) {
 
     const mencoes = chat.participants.map(p => p.id._serialized);
 
-    const titulo = ctx.evento ? `${ctx.evento.emoji} *${ctx.evento.titulo}*\n\n` : '';
-
     const aviso = ctx.args || 'Atenção, pessoal!';
 
-    return ctx.responder(`📢 ${titulo}🔔 ${aviso}`, { mentions: mencoes });
+    return ctx.responder(`📢 🔔 ${aviso}`, { mentions: mencoes });
 
 };
