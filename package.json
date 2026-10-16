@@ -5,10 +5,10 @@
   },
   "name": "bot-qbgeek",
   "version": "1.0.0",
-  "description": "",
+  "description": "Bot de WhatsApp da QB Geek para listas de eventos (Pokémon, Magic, Yu-Gi-Oh! e outros)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",

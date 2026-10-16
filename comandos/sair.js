@@ -1,56 +1,36 @@
-module.exports = async function sair(msg, dados, salvarDados) {
+const { encontrarJogador, removerJogador } = require('../utils/listas');
+const { anunciarPromovidos } = require('../utils/efeitos');
 
-    const idUsuario = msg.author || msg.from;
 
-    const indexPrincipal = dados.inscritos.findIndex(
-        i => i.id === idUsuario
-    );
+module.exports = async function sair(ctx) {
 
-    const indexEspera = dados.listaEspera.findIndex(
-        i => i.id === idUsuario
-    );
+    const { evento } = ctx;
 
-    if (indexPrincipal !== -1) {
+    const encontrado = encontrarJogador(evento, ctx.idsUsuario);
 
-        dados.inscritos.splice(indexPrincipal, 1);
+    if (!encontrado) {
 
-        if (dados.listaEspera.length > 0) {
-
-            const subiu = dados.listaEspera.shift();
-
-            dados.inscritos.push(subiu);
-
-            salvarDados(dados);
-
-            return msg.reply(
-                `🏃 Você saiu.\n\n` +
-                `⬆️ *${subiu.nome}* saiu da fila de espera e entrou na lista principal!`
-            );
-
-        }
-
-        salvarDados(dados);
-
-        return msg.reply(
-            "🏃 Você saiu da lista."
+        return ctx.responder(
+            '❓ Você não está na lista.\n\n' +
+            '💡 Se um ADM te adicionou, envie *!eusou [nº]* com o número da sua posição ' +
+            'para vincular a vaga a você e depois use *!sair*.'
         );
 
     }
 
-    if (indexEspera !== -1) {
+    const { removido, promovidos } = removerJogador(evento, encontrado.lista, encontrado.indice);
 
-        dados.listaEspera.splice(indexEspera, 1);
+    ctx.salvar();
 
-        salvarDados(dados);
+    await ctx.reagir('👋');
 
-        return msg.reply(
-            "🏃 Você saiu da fila de espera."
-        );
+    const origem = encontrado.lista === 'inscritos' ? 'da lista' : 'da fila de espera';
 
-    }
+    const promocao = anunciarPromovidos(promovidos);
 
-    return msg.reply(
-        "❓ Você não está na lista."
+    return ctx.responderComLista(
+        `👋 *${removido.nome}* saiu ${origem}.${promocao.texto}`,
+        promocao.mencoes
     );
 
 };

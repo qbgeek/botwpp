@@ -1,112 +1,49 @@
-const { salvarDados } = require("../utils/dados");
+const TAMANHO_MAXIMO = 120;
+
+const POSICOES = {
+    '!premio1': { campo: 'premio1', medalha: '🥇', lugar: '1º Lugar', exemplo: '!premio1 ETB Caos Ascendente' },
+    '!premio2': { campo: 'premio2', medalha: '🥈', lugar: '2º Lugar', exemplo: '!premio2 Quadri Pack Caos Ascendente' },
+    '!premio3': { campo: 'premio3', medalha: '🥉', lugar: '3º Lugar', exemplo: '!premio3 Triple Pack Caos Ascendente' }
+};
 
 
-module.exports = async function(msg, dados) {
+async function definir(ctx) {
 
+    const { campo, medalha, lugar, exemplo } = POSICOES[ctx.nome];
 
-    const cmd = msg.body.toLowerCase();
+    const premio = ctx.args.slice(0, TAMANHO_MAXIMO);
 
-
-    if (cmd.startsWith('!premio1 ')) {
-
-
-        const premio = msg.body.slice(9).trim();
-
-
-        if (!premio) {
-
-            return msg.reply(
-                '❌ Use assim:\n!premio1 ETB Caos Ascendente'
-            );
-
-        }
-
-
-        dados.premio1 = premio;
-
-        salvarDados(dados);
-
-
-        return msg.reply(
-            `🥇 1º Lugar definido:\n${premio}`
-        );
-
+    if (!premio) {
+        return ctx.responder(`❌ Use assim:\n${exemplo}`);
     }
 
+    ctx.evento[campo] = premio;
+
+    ctx.salvar();
+
+    await ctx.reagir(medalha);
+
+    return ctx.responderComLista(`${medalha} ${lugar} definido: *${premio}*`);
+
+}
 
 
-    else if (cmd.startsWith('!premio2 ')) {
+async function limpar(ctx) {
+
+    ctx.evento.premio1 = 'Não definido';
+    ctx.evento.premio2 = 'Não definido';
+    ctx.evento.premio3 = 'Não definido';
+
+    ctx.salvar();
+
+    await ctx.reagir('🧹');
+
+    return ctx.responderComLista('🧹 Premiações especiais apagadas!');
+
+}
 
 
-        const premio = msg.body.slice(9).trim();
-
-
-        if (!premio) {
-
-            return msg.reply(
-                '❌ Use assim:\n!premio2 Quadri Pack Caos Ascendente'
-            );
-
-        }
-
-
-        dados.premio2 = premio;
-
-        salvarDados(dados);
-
-
-        return msg.reply(
-            `🥈 2º Lugar definido:\n${premio}`
-        );
-
-    }
-
-
-
-    else if (cmd.startsWith('!premio3 ')) {
-
-
-        const premio = msg.body.slice(9).trim();
-
-
-        if (!premio) {
-
-            return msg.reply(
-                '❌ Use assim:\n!premio3 Triple Pack Caos Ascendente'
-            );
-
-        }
-
-
-        dados.premio3 = premio;
-
-        salvarDados(dados);
-
-
-        return msg.reply(
-            `🥉 3º Lugar definido:\n${premio}`
-        );
-
-    }
-
-
-
-    else if (cmd === '!limparpremios') {
-
-
-        dados.premio1 = "Não definido";
-        dados.premio2 = "Não definido";
-        dados.premio3 = "Não definido";
-
-
-        salvarDados(dados);
-
-
-        return msg.reply(
-            "🗑️ Premiações especiais apagadas!"
-        );
-
-    }
-
-
+module.exports = {
+    definir,
+    limpar
 };

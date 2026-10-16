@@ -1,7 +1,7 @@
 function gerarBarraMeta(atual, meta) {
 
     if (meta <= 0) {
-        return "";
+        return { barra: '', porcentagem: 0 };
     }
 
     const porcentagem = Math.min((atual / meta) * 100, 100);

@@ -1,34 +1,14 @@
-module.exports = async function todos(msg) {
+// Marca todos os participantes do grupo sem poluir o texto com @nomes
+module.exports = async function todos(ctx) {
 
-    try {
+    const chat = await ctx.msg.getChat();
 
-        const chat = await msg.client.getChatById(msg.id.remote);
+    const mencoes = chat.participants.map(p => p.id._serialized);
 
-        const participantes = chat.groupMetadata.participants;
+    const titulo = ctx.evento ? `${ctx.evento.emoji} *${ctx.evento.titulo}*\n\n` : '';
 
+    const aviso = ctx.args || 'Atenção, pessoal!';
 
-        const mencoes = participantes.map(
-            p => p.id._serialized
-        );
-
-
-        await msg.reply(
-            "🔔 Atenção, pessoal!",
-            {
-                mentions: mencoes
-            }
-        );
-
-
-    } catch (erro) {
-
-        console.log("❌ Erro no comando !todos:");
-        console.log(erro);
-
-        await msg.reply(
-            "❌ Erro ao executar !todos."
-        );
-
-    }
+    return ctx.responder(`📢 ${titulo}🔔 ${aviso}`, { mentions: mencoes });
 
 };

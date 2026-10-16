@@ -4,3 +4,7 @@ node_modules/
 .wwebjs_authBACKUP/
 config.json
 botwpp/
+
+# Dados dos eventos (gerados pelo bot)
+dados/
+dados_campeonato*.json

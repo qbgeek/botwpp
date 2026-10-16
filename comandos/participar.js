@@ -1,76 +1,85 @@
-module.exports = async function participar(msg, dados, salvarDados) {
+const {
+    limparNome,
+    nomeEmUso,
+    encontrarJogador,
+    adicionarJogador,
+    descreverPosicao
+} = require('../utils/listas');
 
-    const idUsuario = msg.author || msg.from;
+const { nomeDoContato } = require('../utils/identidade');
+const { celebrarMeta } = require('../utils/efeitos');
 
-    const nome = msg.body.replace(/^!participar\s*/i, '').trim();
 
-    if (dados.limiteVagas === 0) {
-        return msg.reply('❌ Inscrições fechadas.');
+module.exports = async function participar(ctx) {
+
+    const { evento } = ctx;
+
+    if (evento.limiteVagas === 0) {
+        return ctx.responder('🔒 Inscrições fechadas no momento. Aguarde os ADMs abrirem as vagas.');
     }
+
+    const jaNaLista = encontrarJogador(evento, ctx.idsUsuario);
+
+    if (jaNaLista) {
+
+        return ctx.responder(
+            `⚠️ Você já está na lista como *${jaNaLista.jogador.nome}* ` +
+            `(${descreverPosicao(jaNaLista.lista, jaNaLista.indice)}).`
+        );
+
+    }
+
+    // Sem nome digitado, usa o nome do perfil do WhatsApp
+    const nome = limparNome(ctx.args) || limparNome(await nomeDoContato(ctx.client, ctx.idUsuario));
 
     if (!nome) {
-        return msg.reply('❌ Digite seu nome!');
+        return ctx.responder('❌ Digite seu nome!\n\nExemplo: *!participar João*');
     }
 
-    const jaInscrito =
-        dados.inscritos.find(i => i.id === idUsuario) ||
-        dados.listaEspera.find(i => i.id === idUsuario);
-
-    if (jaInscrito) {
-        return msg.reply('❌ Você já está na lista!');
+    if (nomeEmUso(evento, nome)) {
+        return ctx.responder(`❌ O nome *${nome}* já está na lista! Use um sobrenome ou apelido.`);
     }
 
-    const nomeExiste =
-        dados.inscritos.find(i =>
-            i.nome.toLowerCase() === nome.toLowerCase()
-        ) ||
-        dados.listaEspera.find(i =>
-            i.nome.toLowerCase() === nome.toLowerCase()
+    const inscritosAntes = evento.inscritos.length;
+
+    const destino = adicionarJogador(evento, {
+        nome,
+        id: ctx.idUsuario,
+        ids: ctx.idsUsuario
+    });
+
+    if (!destino) {
+
+        await ctx.reagir('🚫');
+
+        return ctx.responder('🚫 Inscrições e fila de espera lotadas!');
+
+    }
+
+    ctx.salvar();
+
+    if (destino === 'inscritos') {
+
+        await ctx.reagir('✅');
+
+        const lotou = evento.inscritos.length === evento.limiteVagas;
+
+        await ctx.responderComLista(
+            `✅ *${nome}* está inscrito(a)! Boa sorte! 🍀` +
+            (lotou ? `\n\n🔒 Essa foi a última vaga — lista completa!` : '')
         );
 
-    if (nomeExiste) {
-        return msg.reply(
-            `❌ O nome *${nome}* já está na lista!`
-        );
-    }
+    } else {
 
-    if (dados.inscritos.length < dados.limiteVagas) {
+        await ctx.reagir('⏳');
 
-        dados.inscritos.push({
-            nome,
-            id: idUsuario
-        });
-
-        salvarDados(dados);
-
-        const restam = dados.limiteVagas - dados.inscritos.length;
-
-        return msg.reply(
-            `✅ *${nome}* inscrito!\n\n` +
-            `📋 Restam ${restam} vagas`
-        );
-
-    }
-
-    if (dados.listaEspera.length < dados.limiteEspera) {
-
-        dados.listaEspera.push({
-            nome,
-            id: idUsuario
-        });
-
-        salvarDados(dados);
-
-        return msg.reply(
-            `⏳ Vagas cheias!\n\n` +
-            `*${nome}* foi para a fila de espera.\n\n` +
-            `📋 Posição: ${dados.listaEspera.length}/${dados.limiteEspera}`
+        await ctx.responderComLista(
+            `⏳ Vagas cheias! *${nome}* entrou na fila de espera ` +
+            `(${evento.listaEspera.length}º da fila).`
         );
 
     }
 
-    return msg.reply(
-        '🚫 Inscrições e fila de espera lotadas!'
-    );
+    await celebrarMeta(ctx, inscritosAntes);
 
 };

@@ -1,54 +1,41 @@
-module.exports = async function(msg, dados, salvarDados) {
+const TAMANHO_MAXIMO = 120;
 
-
-    const cmd = msg.body.toLowerCase();
-
-
-    if (cmd.startsWith('!setdata ')) {
-
-
-        dados.dataCamp = msg.body.slice(9).trim();
-
-        salvarDados(dados);
-
-
-        await msg.reply(
-            `✅ Data: *${dados.dataCamp}*`
-        );
-
-
-    }
-
-
-    else if (cmd.startsWith('!sethora ')) {
-
-
-        dados.horaCamp = msg.body.slice(9).trim();
-
-        salvarDados(dados);
-
-
-        await msg.reply(
-            `✅ Horário: *${dados.horaCamp}*`
-        );
-
-
-    }
-
-
-    else if (cmd.startsWith('!setvalor ')) {
-
-
-        dados.valorEntrada = msg.body.slice(10).trim();
-
-        salvarDados(dados);
-
-
-        await msg.reply(
-            `✅ Valor de entrada: *R$ ${dados.valorEntrada}*`
-        );
-
-
-    }
-
+// Todos os campos de texto do evento seguem o mesmo fluxo
+const CAMPOS = {
+    '!settitulo': { campo: 'titulo', rotulo: '🏷️ Título', exemplo: '!settitulo LIGA MAGIC QB' },
+    '!setdata': { campo: 'dataCamp', rotulo: '🗓️ Data', exemplo: '!setdata 01/09/2026' },
+    '!sethora': { campo: 'horaCamp', rotulo: '⏰ Horário', exemplo: '!sethora 18h30' },
+    '!setvalor': { campo: 'valorEntrada', rotulo: '💰 Valor de entrada', exemplo: '!setvalor 20,00' },
+    '!setlocal': { campo: 'local', rotulo: '📍 Local', exemplo: '!setlocal R. da Hora, 345' },
+    '!setbase': { campo: 'premiacaoBase', rotulo: '🎁 Premiação base', exemplo: '!setbase Créditos em loja.' }
 };
+
+
+async function configuracao(ctx) {
+
+    const { campo, rotulo, exemplo } = CAMPOS[ctx.nome];
+
+    let valor = ctx.args.slice(0, TAMANHO_MAXIMO);
+
+    if (campo === 'valorEntrada') {
+        valor = valor.replace(/^r\$\s*/i, '');
+    }
+
+    if (!valor) {
+        return ctx.responder(`❌ Informe o valor.\n\nExemplo:\n${exemplo}`);
+    }
+
+    ctx.evento[campo] = valor;
+
+    ctx.salvar();
+
+    await ctx.reagir('✅');
+
+    return ctx.responderComLista(`✅ ${rotulo}: *${valor}*`);
+
+}
+
+
+configuracao.COMANDOS = Object.keys(CAMPOS);
+
+module.exports = configuracao;

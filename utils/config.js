@@ -1,36 +1,32 @@
-const fs = require('fs');
+const path = require('path');
 
-const CAMINHO_CONFIG = './config.json';
+const { lerJson, salvarJson } = require('./arquivoJson');
+
+const CAMINHO_CONFIG = path.join(__dirname, '..', 'config.json');
 
 
-function carregarConfig() {
+const config = lerJson(CAMINHO_CONFIG, { admins: [] });
 
-    if (fs.existsSync(CAMINHO_CONFIG)) {
+config.admins ??= [];
 
-        return JSON.parse(
-            fs.readFileSync(CAMINHO_CONFIG)
-        );
 
-    }
+function salvarConfig() {
 
-    return {
-        admins: []
-    };
+    salvarJson(CAMINHO_CONFIG, config);
 
 }
 
 
-function salvarConfig(config) {
+// Recebe todos os IDs conhecidos da pessoa (@c.us e @lid)
+function ehAdmin(ids) {
 
-    fs.writeFileSync(
-        CAMINHO_CONFIG,
-        JSON.stringify(config, null, 2)
-    );
+    return ids.some(id => config.admins.includes(id));
 
 }
 
 
 module.exports = {
-    carregarConfig,
-    salvarConfig
+    config,
+    salvarConfig,
+    ehAdmin
 };

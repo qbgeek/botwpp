@@ -1,102 +1,96 @@
-module.exports = async function(msg, dados, salvarDados) {
+const { preencherVagas } = require('../utils/listas');
+const { anunciarPromovidos, celebrarMeta } = require('../utils/efeitos');
+const { plural } = require('../utils/formatacao');
 
 
-    const cmd = msg.body.toLowerCase();
+function lerNumero(ctx) {
+
+    return parseInt(ctx.args.split(/\s+/)[0], 10);
+
+}
 
 
-    if (cmd.startsWith('!vagas ')) {
+async function vagas(ctx) {
 
+    const { evento } = ctx;
 
-        const valor = parseInt(msg.body.split(' ')[1]);
+    const valor = lerNumero(ctx);
 
+    if (isNaN(valor)) {
+        return ctx.responder('❌ Informe um número válido.\n\nExemplo:\n!vagas 20');
+    }
 
-        if (isNaN(valor)) {
+    if (valor <= 0) {
+        return ctx.responder('❌ O número de vagas deve ser maior que zero.');
+    }
 
-            return msg.reply(
-                '❌ Informe um número válido.\n\nExemplo:\n!vagas 20'
-            );
+    if (valor < evento.inscritos.length) {
 
-        }
-
-
-        if (valor <= 0) {
-
-            return msg.reply(
-                '❌ O número de vagas deve ser maior que zero.'
-            );
-
-        }
-
-
-        if (valor < dados.inscritos.length) {
-
-            return msg.reply(
-                `❌ Existem ${dados.inscritos.length} jogadores inscritos.\n\n` +
-                `Defina pelo menos ${dados.inscritos.length} vagas.`
-            );
-
-        }
-
-
-        dados.limiteVagas = valor;
-
-        salvarDados(dados);
-
-
-        const restam = dados.limiteVagas - dados.inscritos.length;
-
-
-        await msg.reply(
-            `📏 Vagas definidas: *${dados.limiteVagas}*\n` +
-            `📋 Restam: *${restam} vagas*`
+        return ctx.responder(
+            `❌ Existem ${evento.inscritos.length} jogadores inscritos.\n\n` +
+            `Defina pelo menos ${evento.inscritos.length} vagas.`
         );
 
     }
 
+    const inscritosAntes = evento.inscritos.length;
 
-    else if (cmd.startsWith('!espera ')) {
+    evento.limiteVagas = valor;
 
+    // Se abriram vagas novas, a fila de espera sobe automaticamente
+    const promovidos = preencherVagas(evento);
 
-        const valor = parseInt(msg.body.split(' ')[1]);
+    ctx.salvar();
 
+    await ctx.reagir('📏');
 
-        if (isNaN(valor)) {
+    const promocao = anunciarPromovidos(promovidos);
 
-            return msg.reply(
-                '❌ Informe um número válido.\n\nExemplo:\n!espera 10'
-            );
+    await ctx.responderComLista(
+        `📏 Vagas definidas: *${valor}*${promocao.texto}`,
+        promocao.mencoes
+    );
 
-        }
+    await celebrarMeta(ctx, inscritosAntes);
 
-
-        if (valor < 0) {
-
-            return msg.reply(
-                '❌ O limite da espera não pode ser negativo.'
-            );
-
-        }
+}
 
 
-        if (valor < dados.listaEspera.length) {
+async function espera(ctx) {
 
-            return msg.reply(
-                `❌ Existem ${dados.listaEspera.length} jogadores na fila de espera.\n\n` +
-                `Defina pelo menos ${dados.listaEspera.length} vagas de espera.`
-            );
+    const { evento } = ctx;
 
-        }
+    const valor = lerNumero(ctx);
 
+    if (isNaN(valor)) {
+        return ctx.responder('❌ Informe um número válido.\n\nExemplo:\n!espera 10');
+    }
 
-        dados.limiteEspera = valor;
+    if (valor < 0) {
+        return ctx.responder('❌ O limite da espera não pode ser negativo.');
+    }
 
-        salvarDados(dados);
+    if (valor < evento.listaEspera.length) {
 
-
-        await msg.reply(
-            `⏳ Limite da fila de espera definido: *${dados.limiteEspera}*`
+        return ctx.responder(
+            `❌ Existem ${evento.listaEspera.length} jogadores na fila de espera.\n\n` +
+            `Defina pelo menos ${evento.listaEspera.length} vagas de espera.`
         );
 
     }
 
+    evento.limiteEspera = valor;
+
+    ctx.salvar();
+
+    await ctx.reagir('⏳');
+
+    return ctx.responderComLista(`⏳ Fila de espera definida: *${plural(valor, 'vaga', 'vagas')}*`);
+
+}
+
+
+module.exports = {
+    vagas,
+    espera
 };

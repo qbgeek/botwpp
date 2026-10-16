@@ -1,85 +1,88 @@
-const { salvarDados } = require("../utils/dados");
-
-module.exports = async function(msg, dados) {
-
-    const cmd = msg.body.toLowerCase();
+const gerarBarraMeta = require('../utils/barraMeta');
+const { linhasPremios, plural } = require('../utils/formatacao');
 
 
-    // META ADMIN
-    if (cmd.startsWith('!meta ')) {
+async function definirMeta(ctx) {
 
-        const valor = parseInt(msg.body.split(' ')[1]);
+    if (!ctx.ehAdm) {
+        return ctx.responder('🔒 Só ADMs podem definir a meta. Para ver o desafio, envie apenas *!meta*.');
+    }
+
+    const valor = parseInt(ctx.args.split(/\s+/)[0], 10);
+
+    if (isNaN(valor) || valor < 0) {
+        return ctx.responder('❌ Use assim: !meta 20\n\n(!meta 0 desativa a meta)');
+    }
+
+    ctx.evento.metaPremiacao = valor;
+
+    ctx.salvar();
+
+    await ctx.reagir('🔥');
+
+    return ctx.responderComLista(
+        valor === 0
+            ? '🔥 Meta de premiação desativada.'
+            : `🔥 Meta definida: *${plural(valor, 'jogador', 'jogadores')}*`
+    );
+
+}
 
 
-        if (!valor) {
-            return msg.reply('❌ Use assim: !meta 20');
-        }
+async function mostrarMeta(ctx) {
 
+    const { evento } = ctx;
 
-        dados.metaPremiacao = valor;
+    const inscritos = evento.inscritos.length;
+    const meta = evento.metaPremiacao;
 
-        salvarDados(dados);
+    const linhas = [`🔥 *DESAFIO — ${evento.titulo}* 🔥`, ''];
 
+    if (meta === 0) {
 
-        return msg.reply(
-            `🔥 Meta definida: ${valor} jogadores`
+        linhas.push('⏳ A meta de premiação ainda não foi definida pela organização.');
+
+        return ctx.responder(linhas.join('\n'));
+
+    }
+
+    const progresso = gerarBarraMeta(inscritos, meta);
+
+    linhas.push(
+        `${progresso.barra}  *${progresso.porcentagem}%*`,
+        `👥 *${inscritos}/${meta} jogadores*`,
+        ''
+    );
+
+    if (inscritos >= meta) {
+
+        linhas.push(
+            '🎉 *META ATINGIDA!*',
+            '',
+            '🎁 *PREMIAÇÃO ESPECIAL:*'
+        );
+
+    } else {
+
+        linhas.push(
+            `🚀 Faltam apenas *${plural(meta - inscritos, 'jogador', 'jogadores')}!*`,
+            '🔥 Mais jogadores = premiação melhor!',
+            '',
+            '🎁 *Premiação ao atingir a meta:*'
         );
 
     }
 
+    linhas.push(...linhasPremios(evento));
 
-    // META PÚBLICA
-    if (cmd === '!meta') {
+    return ctx.responder(linhas.join('\n'));
 
-        const inscritos = dados.inscritos.length;
-        const meta = dados.metaPremiacao;
-
-
-        let texto = `🔥 *DESAFIO DA LIGA QB* 🔥\n\n`;
+}
 
 
-        if (meta === 0) {
+// "!meta" mostra o desafio; "!meta N" (ADM) define a meta
+module.exports = async function meta(ctx) {
 
-            texto += `⏳ A meta de premiação ainda não foi definida pela organização.`;
-
-            return msg.reply(texto);
-
-        }
-
-
-        texto += `👥 Participantes:\n`;
-        texto += `*${inscritos}/${meta} jogadores*\n\n`;
-
-
-        if (inscritos >= meta) {
-
-
-            texto += `🎉 *META ATINGIDA!*\n\n`;
-            texto += `🎁 *PREMIAÇÃO ESPECIAL:*\n\n`;
-            texto += `🥇 1º Lugar: ${dados.premio1}\n`;
-            texto += `🥈 2º Lugar: ${dados.premio2}\n`;
-            texto += `🥉 3º Lugar: ${dados.premio3}`;
-
-
-        } else {
-
-
-            const faltam = meta - inscritos;
-
-
-            texto += `🚀 Faltam apenas *${faltam} jogadores!*\n\n`;
-            texto += `🔥 Mais jogadores = premiação melhor!\n\n`;
-
-            texto += `🎁 *Premiação ao atingir a meta:*\n`;
-            texto += `🥇 ${dados.premio1}\n`;
-            texto += `🥈 ${dados.premio2}\n`;
-            texto += `🥉 ${dados.premio3}`;
-
-        }
-
-
-        return msg.reply(texto);
-
-    }
+    return ctx.args ? definirMeta(ctx) : mostrarMeta(ctx);
 
 };
