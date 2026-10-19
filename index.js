@@ -8,9 +8,14 @@ const qrcode = require('qrcode-terminal');
 const executarComando = require('./comandos');
 const { todasAsListas } = require('./utils/grupos');
 const { config } = require('./utils/config');
+const modoTeste = require('./utils/modoTeste');
 
 console.log(`✅ Configuração carregada (${config.admins.length} ADMs)`);
 console.log(`✅ Listas carregadas (${todasAsListas().length} abertas)`);
+
+if (modoTeste.ativo) {
+    console.log(`🧪 MODO TESTE: só responde nos grupos ${modoTeste.GRUPOS_TESTE.map(g => `"${g}"`).join(', ')}`);
+}
 
 
 // =========================================================
@@ -72,6 +77,10 @@ client.on('ready', () => {
 client.on('message_create', async (msg) => {
 
     try {
+
+        if (await modoTeste.foraDoTeste(msg)) {
+            return;
+        }
 
         await executarComando(msg, client);
 

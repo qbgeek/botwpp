@@ -91,6 +91,16 @@ npm start
 
 Na primeira vez, escaneie o QR code com o WhatsApp do número do bot.
 
+### 🧪 Modo teste
+
+Para testar com outro número sem responder em nenhum outro grupo, defina `BOT_SOMENTE_GRUPO` com o nome do(s) grupo(s) de teste, separados por vírgula. O bot ignora todos os outros chats.
+
+```powershell
+$env:BOT_SOMENTE_GRUPO="Teste Bot QB,Teste Bot QB 2"; npm.cmd start
+```
+
+**Em produção, não defina essa variável.**
+
 ## Uso rápido
 
 | Quem | Comando | O que faz |

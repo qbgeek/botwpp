@@ -314,6 +314,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 | [utils/efeitos.js](utils/efeitos.js) | Marcação de promovidos e aviso de meta |
 | [utils/confirmacoes.js](utils/confirmacoes.js) | `!confirmar` com prazo, por grupo |
 | [utils/arquivoJson.js](utils/arquivoJson.js) | Leitura com backup e gravação segura |
+| [utils/modoTeste.js](utils/modoTeste.js) | Modo teste: com `BOT_SOMENTE_GRUPO` definida, responde só nos grupos com esse nome |
 | `README.md`, `ALTERACOES.md` | Documentação |
 
 ### Reescritos ou alterados
