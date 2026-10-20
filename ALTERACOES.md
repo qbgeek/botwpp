@@ -62,6 +62,7 @@ Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da Q
 | 21 | Nomes sem limite de tamanho | Uma mensagem gigante poluía a lista | Nomes limitados a 40 caracteres; textos de configuração a 120 |
 | 22 | O Chrome do bot rodava com `--no-sandbox` em qualquer sistema | No Windows, todo o navegador (que exibe as mensagens recebidas) rodava sem isolamento do resto do computador | O sandbox só é desligado no Linux, onde rodar como root/Docker exige isso |
 | 23 | Um nome de lista igual a uma propriedade interna do JavaScript (`constructor`) era confundido com uma lista | `!constructor` causava erro e um ADM podia alterar um objeto interno | Busca da lista feita só nas listas cadastradas (`Object.hasOwn`) |
+| 25 | `msg.getChat()` do whatsapp-web.js 1.34.7 falha nas versões atuais do WhatsApp Web ("No key or key range specified" ao buscar a última mensagem do grupo) | `!todos` não funcionava e o modo teste ignorava tudo | Leitura direta só do nome e dos participantes do grupo ([utils/whatsapp.js](utils/whatsapp.js)) |
 | 24 | Dependências com vulnerabilidades conhecidas | `npm audit` apontava 12 alertas | `npm audit fix` sem quebra: 9 restantes, todos na cadeia usada só para baixar o Chrome (ver seção 10) |
 
 ---
@@ -318,6 +319,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 | [utils/confirmacoes.js](utils/confirmacoes.js) | `!confirmar` com prazo, por grupo |
 | [utils/arquivoJson.js](utils/arquivoJson.js) | Leitura com backup e gravação segura |
 | [utils/modoTeste.js](utils/modoTeste.js) | Modo teste: com `BOT_SOMENTE_GRUPO` definida, responde só nos grupos com esse nome |
+| [utils/whatsapp.js](utils/whatsapp.js) | Lê nome e participantes do grupo sem o `getChat()` da biblioteca, que está quebrado |
 | `README.md`, `ALTERACOES.md` | Documentação |
 
 ### Reescritos ou alterados

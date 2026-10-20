@@ -8,6 +8,8 @@
 //   cmd:        set BOT_SOMENTE_GRUPO=Teste Bot QB && npm start
 // =========================================================
 
+const { idDoChat, lerChat } = require('./whatsapp');
+
 const normalizar = nome => (nome || '').trim().toLowerCase();
 
 const GRUPOS_TESTE = (process.env.BOT_SOMENTE_GRUPO || '')
@@ -25,19 +27,23 @@ async function foraDoTeste(msg) {
         return false;
     }
 
-    let chat;
+    const comando = msg.body.trim().split(/\s+/)[0];
 
-    try {
-        chat = await msg.getChat();
-    } catch (erro) {
+    console.log(`📩 Comando recebido: ${comando} (de ${msg.fromMe ? 'você' : msg.author || msg.from})`);
+
+    const chat = await lerChat(msg.client, idDoChat(msg));
+
+    if (!chat) {
+        console.log(`⚠️ Chat de ${comando} não identificado; ignorado por segurança.`);
         return true;
     }
 
-    if (chat.isGroup && GRUPOS_TESTE.includes(normalizar(chat.name))) {
+    if (chat.ehGrupo && GRUPOS_TESTE.includes(normalizar(chat.nome))) {
+        console.log(`✅ Grupo de teste "${chat.nome}": processando ${comando}`);
         return false;
     }
 
-    console.log(`🧪 Ignorado (fora do grupo de teste): "${chat.name || 'conversa privada'}" -> ${msg.body.split(/\s+/)[0]}`);
+    console.log(`🧪 Ignorado (fora do grupo de teste): "${chat.ehGrupo ? chat.nome : 'conversa privada'}" -> ${comando}`);
 
     return true;
 

@@ -12,6 +12,7 @@ const {
 const { limparLista } = require('../utils/listas');
 const { montarLista, plural } = require('../utils/formatacao');
 const { solicitarConfirmacao, retirarConfirmacao } = require('../utils/confirmacoes');
+const { lerChat } = require('../utils/whatsapp');
 
 const TAMANHO_MAXIMO_NOME = 20;
 
@@ -24,12 +25,9 @@ const EXPLICACAO_CRIAR =
 
 async function nomeDoGrupo(ctx) {
 
-    try {
-        const chat = await ctx.msg.getChat();
-        return chat.name || '';
-    } catch (erro) {
-        return '';
-    }
+    const chat = await lerChat(ctx.client, ctx.chatId);
+
+    return chat ? chat.nome : '';
 
 }
 
