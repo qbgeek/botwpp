@@ -24,12 +24,17 @@ if (modoTeste.ativo) {
 
 console.log("⏳ Preparando WhatsApp...");
 
+// O sandbox do Chrome isola o navegador do resto do computador.
+// Ele só é desligado no Linux, onde rodar como root/Docker exige isso.
+const argsSandbox = process.platform === 'linux'
+    ? ['--no-sandbox', '--disable-setuid-sandbox']
+    : [];
+
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
+            ...argsSandbox,
             '--disable-dev-shm-usage',
             '--disable-extensions',
             '--disable-gpu',

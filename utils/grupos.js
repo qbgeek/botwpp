@@ -106,14 +106,18 @@ function salvarListas() {
 
 function listasDoGrupo(chatId) {
 
-    return grupos[chatId]?.listas || {};
+    return Object.hasOwn(grupos, chatId) ? grupos[chatId].listas : {};
 
 }
 
 
+// Object.hasOwn evita que nomes como "constructor" encontrem
+// propriedades internas do JavaScript em vez de uma lista
 function obterLista(chatId, chave) {
 
-    return listasDoGrupo(chatId)[chave] || null;
+    const listas = listasDoGrupo(chatId);
+
+    return Object.hasOwn(listas, chave) ? listas[chave] : null;
 
 }
 

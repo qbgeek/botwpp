@@ -60,6 +60,9 @@ Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da Q
 | 19 | O WhatsApp identifica a mesma pessoa por número (`@c.us`) ou ID anônimo (`@lid`) | ADM não reconhecido, ou `!sair` sem encontrar a pessoa | O bot resolve as duas formas ([utils/identidade.js](utils/identidade.js)) |
 | 20 | Erros em comandos ficavam sem resposta | O usuário ficava sem saber se funcionou | Erro registrado no log e resposta "Algo deu errado" |
 | 21 | Nomes sem limite de tamanho | Uma mensagem gigante poluía a lista | Nomes limitados a 40 caracteres; textos de configuração a 120 |
+| 22 | O Chrome do bot rodava com `--no-sandbox` em qualquer sistema | No Windows, todo o navegador (que exibe as mensagens recebidas) rodava sem isolamento do resto do computador | O sandbox só é desligado no Linux, onde rodar como root/Docker exige isso |
+| 23 | Um nome de lista igual a uma propriedade interna do JavaScript (`constructor`) era confundido com uma lista | `!constructor` causava erro e um ADM podia alterar um objeto interno | Busca da lista feita só nas listas cadastradas (`Object.hasOwn`) |
+| 24 | Dependências com vulnerabilidades conhecidas | `npm audit` apontava 12 alertas | `npm audit fix` sem quebra: 9 restantes, todos na cadeia usada só para baixar o Chrome (ver seção 10) |
 
 ---
 
@@ -351,4 +354,6 @@ Use `e1`, `e2`… para posições da fila de espera.
 - **Confirmações pendentes** (`!confirmar`) ficam só na memória: se o bot reiniciar, é preciso pedir de novo.
 - **`!admins`** lista os IDs cadastrados, que podem conter números de telefone. Use de preferência no privado do bot.
 - O bot usa o **whatsapp-web.js** (WhatsApp Web não oficial). Mudanças do WhatsApp podem exigir atualizar a biblioteca.
+- **A pasta `.wwebjs_auth/` é a "chave" do WhatsApp conectado.** Quem tiver uma cópia dela consegue usar a conta enquanto o aparelho estiver conectado. Nunca compacte nem envie a pasta do projeto com ela dentro (o git já a ignora).
+- **Alertas restantes do `npm audit`** (`basic-ftp`, `extract-zip` e dependentes): estão no `@puppeteer/browsers`, usado só para baixar o Chrome. Não são alcançáveis por mensagens do WhatsApp. A correção automática (`--force`) rebaixaria o whatsapp-web.js para 1.34.2, por isso não foi aplicada.
 - Esta versão foi testada com mensagens simuladas, **não conectada ao WhatsApp real**. Faça um teste em um grupo antes de liberar.
