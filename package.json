@@ -8,7 +8,8 @@
   "description": "Bot de WhatsApp da QB Geek para listas de eventos (Pokémon, Magic, Yu-Gi-Oh! e outros)",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node teste/simular.js"
   },
   "keywords": [],
   "author": "",

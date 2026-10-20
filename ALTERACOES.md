@@ -320,7 +320,9 @@ Use `e1`, `e2`… para posições da fila de espera.
 | [utils/arquivoJson.js](utils/arquivoJson.js) | Leitura com backup e gravação segura |
 | [utils/modoTeste.js](utils/modoTeste.js) | Modo teste: com `BOT_SOMENTE_GRUPO` definida, responde só nos grupos com esse nome |
 | [utils/whatsapp.js](utils/whatsapp.js) | Lê nome e participantes do grupo sem o `getChat()` da biblioteca, que está quebrado |
-| `README.md`, `ALTERACOES.md` | Documentação |
+| `README.md`, `ALTERACOES.md` | Documentação (o README tem o passo a passo de teste local e instalação para o cliente) |
+| `AGENTS.md` | Contexto completo para próximos agentes de IA / desenvolvedores |
+| [teste/simular.js](teste/simular.js) | Testes automáticos sem WhatsApp (`npm test`, 38 verificações) |
 
 ### Reescritos ou alterados
 
