@@ -1,13 +1,12 @@
 const {
     normalizarChave,
-    listasDoGrupo,
     obterLista,
     criarLista,
     removerLista,
     todasAsListas,
     lerLegado,
     marcarLegadoImportado
-} = require('../utils/grupos');
+} = require('../utils/armazenamento');
 
 const { limparLista } = require('../utils/listas');
 const { montarLista, plural } = require('../utils/formatacao');
@@ -23,11 +22,16 @@ const EXPLICACAO_CRIAR =
     `_(data, hora, vagas, reservas e valor; o valor é opcional e aceita espaços)_`;
 
 
-async function nomeDoGrupo(ctx) {
+// Grupo onde a lista está sendo criada (vazio se for no privado)
+async function origem(ctx) {
+
+    if (!ctx.ehGrupo) {
+        return {};
+    }
 
     const chat = await lerChat(ctx.client, ctx.chatId);
 
-    return chat ? chat.nome : '';
+    return { chatId: ctx.chatId, nomeGrupo: chat ? chat.nome : '' };
 
 }
 
@@ -100,7 +104,7 @@ function resumoCampos(campos) {
 }
 
 
-// !lista                -> mostra a lista do grupo (ou o resumo, se houver várias)
+// !lista                -> mostra a lista (ou o resumo, se houver várias)
 // !lista #ygo           -> mostra a lista; cria vazia se não existir
 // !lista #ygo <dados>   -> cria já configurada, ou recomeça (pede !confirmar)
 async function lista(ctx) {
@@ -109,14 +113,14 @@ async function lista(ctx) {
 
     if (!primeira) {
 
-        const listas = Object.values(listasDoGrupo(ctx.chatId));
+        const listas = todasAsListas();
 
         if (listas.length === 1) {
             return ctx.responder(montarLista(listas[0]));
         }
 
         if (listas.length === 0) {
-            return ctx.responder(`📋 Este grupo ainda não tem lista. Crie com:\n\n${EXPLICACAO_CRIAR}`);
+            return ctx.responder(`📋 Ainda não existe nenhuma lista. Crie com:\n\n${EXPLICACAO_CRIAR}`);
         }
 
         return listar(ctx);
@@ -127,7 +131,7 @@ async function lista(ctx) {
     const chave = normalizarChave(comando);
     const resto = ctx.args.slice(primeira.length).trim();
 
-    const existente = obterLista(ctx.chatId, chave);
+    const existente = obterLista(chave);
 
     if (!resto) {
 
@@ -141,14 +145,14 @@ async function lista(ctx) {
             return ctx.responder(erroNome);
         }
 
-        ctx.lista = criarLista(ctx.chatId, await nomeDoGrupo(ctx), comando);
+        ctx.lista = criarLista(comando, {}, await origem(ctx));
 
         await ctx.reagir('🆕');
 
         return ctx.responder(
             `🆕 Lista *${ctx.lista.titulo}* criada!\n\n` +
             `Para configurar tudo de uma vez:\n${EXPLICACAO_CRIAR.replace('#ygo', `#${comando}`)}\n\n` +
-            `A galera entra com *!${comando} Nome*.`
+            `A galera entra com *!${comando} Nome*, em qualquer grupo do bot.`
         );
 
     }
@@ -167,7 +171,7 @@ async function lista(ctx) {
             return ctx.responder(erroNome);
         }
 
-        ctx.lista = criarLista(ctx.chatId, await nomeDoGrupo(ctx), comando, campos);
+        ctx.lista = criarLista(comando, campos, await origem(ctx));
 
         await ctx.reagir('🆕');
 
@@ -187,23 +191,23 @@ async function lista(ctx) {
 }
 
 
-// No grupo: listas do grupo | no privado: listas de todos os grupos
+// Todas as listas abertas (valem para todos os grupos)
 async function listar(ctx) {
 
-    const itens = todasAsListas().filter(i => !ctx.ehGrupo || i.chatId === ctx.chatId);
+    const itens = todasAsListas();
 
     if (itens.length === 0) {
         return ctx.responder('📚 Nenhuma lista aberta no momento.');
     }
 
-    const blocos = itens.map(({ nomeGrupo, lista }) => {
+    const blocos = itens.map(lista => {
 
         const pagos = lista.inscritos.filter(j => j.pago).length;
 
         let bloco = `🏆 *${lista.titulo}* — *!${lista.comando}*\n`;
 
-        if (!ctx.ehGrupo) {
-            bloco += `👥 ${nomeGrupo || '(grupo sem nome)'}\n`;
+        if (lista.nomeGrupoOrigem) {
+            bloco += `👥 Criada em: ${lista.nomeGrupoOrigem}\n`;
         }
 
         bloco += `🗓️ ${lista.dataCamp}  ⏰ ${lista.horaCamp}\n`;
@@ -270,7 +274,7 @@ async function confirmar(ctx) {
         return ctx.responder('❌ Nada para confirmar (ou o prazo de 2 minutos expirou).');
     }
 
-    ctx.lista = obterLista(ctx.chatId, pendente.chave);
+    ctx.lista = obterLista(pendente.chave);
 
     if (!ctx.lista) {
         return ctx.responder('❌ Essa lista não existe mais.');
@@ -280,7 +284,7 @@ async function confirmar(ctx) {
 
         const { titulo, comando } = ctx.lista;
 
-        removerLista(ctx.chatId, pendente.chave);
+        removerLista(pendente.chave);
 
         await ctx.reagir('🏁');
 
@@ -353,8 +357,8 @@ async function importarLegado(ctx) {
         return ctx.responder('❌ Não há dados da versão antiga (dados_campeonato.json) para importar.');
     }
 
-    if (obterLista(ctx.chatId, normalizarChave(comando))) {
-        return ctx.responder(`⚠️ A lista *!${comando}* já existe neste grupo. Escolha outro nome.`);
+    if (obterLista(normalizarChave(comando))) {
+        return ctx.responder(`⚠️ A lista *!${comando}* já existe. Escolha outro nome.`);
     }
 
     const erroNome = validarNome(ctx, comando);
@@ -376,7 +380,7 @@ async function importarLegado(ctx) {
     campos.inscritos = (campos.inscritos || []).map(converterJogadorLegado);
     campos.listaEspera = (campos.listaEspera || []).map(converterJogadorLegado);
 
-    ctx.lista = criarLista(ctx.chatId, await nomeDoGrupo(ctx), comando, campos);
+    ctx.lista = criarLista(comando, campos, await origem(ctx));
 
     marcarLegadoImportado();
 

@@ -1,4 +1,4 @@
-const { normalizarChave, listasDoGrupo, obterLista } = require('../utils/grupos');
+const { normalizarChave, todasAsListas, obterLista } = require('../utils/armazenamento');
 const { encontrarJogador, podeSairSozinho, removerJogador } = require('../utils/listas');
 const { anunciarPromovidos } = require('../utils/efeitos');
 
@@ -13,17 +13,17 @@ module.exports = async function sair(ctx) {
 
     if (nomeLista) {
 
-        const lista = obterLista(ctx.chatId, normalizarChave(nomeLista));
+        const lista = obterLista(normalizarChave(nomeLista));
 
         if (!lista) {
-            return ctx.responder(`❌ Não existe a lista *${nomeLista}* neste grupo.`);
+            return ctx.responder(`❌ Não existe a lista *${nomeLista}*.`);
         }
 
         candidatas = [lista];
 
     } else {
 
-        candidatas = Object.values(listasDoGrupo(ctx.chatId));
+        candidatas = todasAsListas();
 
     }
 

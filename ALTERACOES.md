@@ -1,11 +1,13 @@
-# Alterações — branch `feat/multi-eventos`
+# Alterações — nova versão do bot
 
-Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da QB Geek nesta branch. Também traz os passos para atualizar o servidor sem perder a lista atual.
+Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da QB Geek. O trabalho foi feito na branch `feat/multi-eventos` e depois levado para a `master`. A versão antiga está guardada na branch `projeto-legado`.
+
+O passo a passo de teste e instalação está no [README.md](README.md).
 
 ## Resumo
 
 1. **Correção de todos os erros identificados**: o principal é que qualquer pessoa conseguia executar comandos de ADM.
-2. **Várias listas com nome livre**: o ADM cria `!lista #ygo` e a galera entra com `!ygo Nome`. Cada grupo pode ter várias listas ao mesmo tempo (`!ygo`, `!cup`, `!glc`, `!mesão`…).
+2. **Várias listas com nome livre, válidas em todos os grupos**: o ADM cria `!lista #ygo` e a galera entra com `!ygo Nome` em qualquer grupo do bot, inclusive grupos criados depois. Várias listas podem estar abertas ao mesmo tempo (`!ygo`, `!cup`, `!glc`, `!mesão`…).
 3. **Criação em um comando só**: `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00`.
 4. **Lista atualizada a cada inscrição**, mostrando só até o último nome. O `!lista` de consulta deixou de ser público.
 5. **`!pago 14`** coloca o 🆗 ao lado do nome. Vaga paga ou adicionada pelo ADM não sai sozinha.
@@ -22,6 +24,7 @@ Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da Q
 | `!ajuda` / `!comandos` passa a ser `!neymar` | `!neymar` (e `!ajudaney`). `!ajuda` e `!comandos` não respondem mais |
 | Tirar o `!id` do menu | Fora do menu; virou comando só de ADM |
 | "`!lista ygo` cria uma lista pro comando `!ygo`"; inscrição com "`!ygo lucas chagas`" | `!lista #ygo` cria; `!ygo Nome` inscreve |
+| Comandos funcionando em qualquer grupo (o cliente pode criar grupos novos) | Listas globais: valem em todos os grupos do bot, sem configuração. Os comandos de ADM também funcionam no privado do bot |
 | Listas: `!GLC`, `!YGO`, `!MESÃO`, `!CUP`, `!PRERELEASE`, `!CHALLENGE`, `!PREMIERE` | Qualquer nome funciona; maiúsculas e acentos são ignorados (`!MESÃO` = `!mesao`) |
 | Não mostrar esses comandos no menu | O menu não lista as listas; o comando de entrada aparece no fim de cada lista |
 | Data, hora e valor de cada lista num comando só | `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00` |
@@ -42,7 +45,7 @@ Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da Q
 | 1 | Os comandos de ADM eram executados **antes** de checar se a pessoa era ADM | Qualquer membro podia apagar a lista ou mudar vagas. O histórico do grupo mostra isso acontecendo: o comando rodava e só depois vinha "Acesso negado" | A permissão é verificada num único lugar ([comandos/index.js](comandos/index.js)), **antes** de executar |
 | 2 | Código duplicado em `index.js` chamava funções inexistentes | Quase todo comando gerava `ReferenceError` no log | Código removido; o `index.js` só inicia o WhatsApp |
 | 3 | `!add` criava um ID falso (`ADM_<número>`) | O `!sair` nunca encontrava a pessoa | A vaga agora é marcada como "adicionada pelo ADM" e só um ADM a remove (seção 5) |
-| 4 | O bot respondia comandos de lista no privado | Era possível se inscrever pelo privado | Listas só funcionam no grupo onde foram criadas |
+| 4 | O bot respondia comandos de lista no privado | Era possível se inscrever pelo privado | A inscrição (`!ygo Nome`) só funciona em grupos |
 | 5 | `!limparlista` zerava as vagas sem avisar | Ninguém conseguia se inscrever até um novo `!vagas` | A limpeza mantém vagas, reservas, valor, título e local |
 | 6 | `dados_campeonato.json` (com nomes reais) estava no git | Dados pessoais versionados | Removido do git e adicionado ao `.gitignore`, junto com a pasta `dados/` |
 | 7 | `!todos` passava as opções no lugar errado | O comando nunca funcionou | Corrigido; aceita mensagem: `!todos Começa às 19h!` |
@@ -72,8 +75,9 @@ Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da Q
 ### Como funciona
 
 - O ADM cria uma lista com um nome qualquer, e **esse nome vira o comando de inscrição**: a lista `#ygo` responde a `!ygo`.
-- Um **grupo pode ter várias listas** ao mesmo tempo (ex.: `!cup` e `!challenge` no grupo de Pokémon).
-- Cada lista pertence ao **grupo onde foi criada**: `!ygo` não funciona no grupo de Pokémon se a lista foi criada no grupo de Yu-Gi-Oh!.
+- **As listas são globais**: uma lista criada em qualquer grupo (ou no privado do bot) funciona em **todos os grupos** em que o bot está, inclusive grupos criados depois. Várias listas podem estar abertas ao mesmo tempo.
+- A **inscrição** (`!ygo Nome`) só funciona em grupos, para a lista atualizada aparecer para todos. Os comandos de ADM funcionam também no privado do bot.
+- O bot guarda o grupo onde cada lista foi criada. Isso serve de atalho nos comandos de ADM (ver "Ajustes rápidos") e aparece no `!listas`.
 - Todas as listas têm **a mesma estrutura**; só mudam os dados (data, hora, valor, vagas, prêmios…).
 - Os **ADMs são globais**: quem é ADM, é ADM em todos os grupos.
 - O nome não diferencia maiúsculas nem acentos (`!MESÃO`, `!Mesão` e `!mesao` são a mesma lista). Não pode começar com número nem repetir um comando do bot (ex.: `#sair`).
@@ -99,7 +103,7 @@ Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da Q
 
 Os comandos de ajuste recebem o nome da lista logo depois do comando: `!vagas ygo 28`, `!setvalor cup 15,00`, `!pago ygo 14`.
 
-**Se o grupo tiver uma lista só, o nome é opcional**: `!vagas 28` e `!pago 14` funcionam. Se o grupo tiver várias e o nome faltar, o bot pergunta: "Qual lista? Este grupo tem: ygo, cup".
+**O nome é opcional** em dois casos: se só existir uma lista, ou se só uma lista foi criada no grupo onde o comando foi enviado. Nesses casos, `!vagas 28` e `!pago 14` funcionam direto. Fora disso, o bot pergunta: "Qual lista? Listas abertas: ygo, cup".
 
 ### Estrutura de dados
 
@@ -107,39 +111,38 @@ O antigo `dados_campeonato.json` (uma lista só) foi substituído por `dados/lis
 
 ```json
 {
-  "120363000000000000@g.us": {
-    "nome": "Liga Pokémon QB Geek",
-    "listas": {
-      "cup": {
-        "chave": "cup",
-        "comando": "cup",
-        "titulo": "CUP",
-        "dataCamp": "30/10/2026",
-        "horaCamp": "18h30",
-        "valorEntrada": "20,00",
-        "local": "R. da Hora, 345 - Loja 14 - Espinheiro, Recife - PE, 52020-010",
-        "premiacaoBase": "Créditos em loja.",
-        "limiteVagas": 24,
-        "limiteEspera": 12,
-        "metaPremiacao": 0,
-        "premio1": "Não definido",
-        "premio2": "Não definido",
-        "premio3": "Não definido",
-        "inscritos": [
-          {
-            "nome": "Lucas Chagas",
-            "id": "123456789@lid",
-            "ids": ["123456789@lid", "5581999999999@c.us"],
-            "pago": true,
-            "adicionadoPorAdm": false
-          }
-        ],
-        "listaEspera": []
+  "cup": {
+    "chave": "cup",
+    "comando": "cup",
+    "titulo": "CUP",
+    "grupoOrigem": "120363000000000000@g.us",
+    "nomeGrupoOrigem": "Liga Pokémon QB Geek",
+    "dataCamp": "30/10/2026",
+    "horaCamp": "18h30",
+    "valorEntrada": "20,00",
+    "local": "R. da Hora, 345 - Loja 14 - Espinheiro, Recife - PE, 52020-010",
+    "premiacaoBase": "Créditos em loja.",
+    "limiteVagas": 24,
+    "limiteEspera": 12,
+    "metaPremiacao": 0,
+    "premio1": "Não definido",
+    "premio2": "Não definido",
+    "premio3": "Não definido",
+    "inscritos": [
+      {
+        "nome": "Lucas Chagas",
+        "id": "123456789@lid",
+        "ids": ["123456789@lid", "5581999999999@c.us"],
+        "pago": true,
+        "adicionadoPorAdm": false
       }
-    }
+    ],
+    "listaEspera": []
   }
 }
 ```
+
+Um arquivo no formato intermediário (listas separadas por grupo, de versões de teste) é convertido automaticamente ao iniciar.
 
 ---
 
@@ -222,15 +225,15 @@ Créditos em loja.
 |---------|-----------|
 | `!lista #nome data hora vagas reservas [valor]` | Cria a lista; se já existir, abre uma nova edição (pede `!confirmar`) |
 | `!lista #nome` | Mostra a lista (cria vazia se não existir) |
-| `!lista` | Mostra a lista do grupo, ou o resumo se houver várias |
-| `!listas` | Listas abertas do grupo; no privado do bot, de todos os grupos |
+| `!lista` | Mostra a lista, ou o resumo se houver várias |
+| `!listas` | Todas as listas abertas e o grupo onde cada uma foi criada |
 | `!limparlista [lista]` | Zera inscritos, data, hora, meta e prêmios (pede `!confirmar`) |
 | `!excluirlista [lista]` | Apaga a lista e o comando dela (pede `!confirmar`) |
 | `!confirmar` | Confirma a ação pendente (válido por 2 min). `!confirmarlimpeza` também funciona |
 | `!importarlegado #nome` | Importa a lista da versão antiga |
 | `!todos [mensagem]` | Marca todos do grupo |
 
-### ADM: ajustes (`[lista]` é opcional se o grupo tiver uma lista só)
+### ADM: ajustes (`[lista]` é opcional se só existir uma lista, ou uma criada no grupo)
 
 | Comando | Descrição |
 |---------|-----------|
@@ -280,25 +283,17 @@ Use `e1`, `e2`… para posições da fila de espera.
 
 ---
 
-## 8. Como atualizar o servidor
+## 8. Como instalar no computador do cliente
 
-> ⚠️ **Faça backup antes.** O arquivo `dados_campeonato.json` saiu do git. Dependendo do estado do servidor, o `git` pode apagá-lo ou se recusar a atualizar.
+O passo a passo completo está no [README.md](README.md), na **Parte 2**. Em resumo:
 
-1. **Pare o bot.**
-2. **Faça backup**, copiando para fora da pasta do projeto:
-   - `dados_campeonato.json`
-   - `config.json`
-3. Atualize o código:
-   ```bash
-   git fetch
-   git checkout feat/multi-eventos
-   ```
-   - Se o git reclamar de alterações locais em `dados_campeonato.json`, mova o arquivo para fora da pasta, rode o `checkout` e traga-o de volta.
-   - Se o arquivo sumir depois do `checkout`, restaure a cópia do backup.
-4. `npm install`
-5. `npm start`. A sessão do WhatsApp (`.wwebjs_auth/`) é mantida, então não é preciso ler o QR code de novo.
-6. **No grupo da lista atual**, um ADM envia `!importarlegado #liga` (troque `liga` pelo nome que a galera vai usar para se inscrever). O título "LIGA QB" é mantido, e quem tinha 🆗 no nome fica marcado como pago. O arquivo antigo vira `dados_campeonato.importado-<data>.json`, como backup.
-7. Crie as outras listas com `!lista #nome data hora vagas reservas valor`.
+1. Clonar a `master` numa **pasta nova**. A pasta do bot antigo não é alterada e serve para voltar atrás.
+2. **Copiar** da pasta antiga para a nova os arquivos `dados_campeonato.json` (lista atual) e `config.json` (ADMs).
+3. Parar o bot antigo, iniciar o novo e escanear o QR com o número da QB GeeK.
+4. `!importarlegado #liga` para trazer a lista atual. O título "LIGA QB" é mantido, e quem tinha 🆗 fica marcado como pago. Na pasta nova, a cópia do arquivo vira `dados_campeonato.importado-<data>.json`.
+5. Criar as outras listas com `!lista #nome data hora vagas reservas valor`.
+
+> 🛑 **Não rode `git pull` na pasta do bot antigo.** A `master` agora tem o código novo.
 
 ---
 
@@ -310,7 +305,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 |---------|--------|
 | [comandos/gestao.js](comandos/gestao.js) | `!lista`, `!listas`, `!limparlista`, `!excluirlista`, `!confirmar`, `!importarlegado` |
 | [comandos/admins.js](comandos/admins.js) | `!addadm`, `!deladm`, `!admins` (saíram do `index.js`) |
-| [utils/grupos.js](utils/grupos.js) | Leitura e gravação de `dados/listas.json` (substitui `utils/dados.js`) |
+| [utils/armazenamento.js](utils/armazenamento.js) | Leitura e gravação das listas globais em `dados/listas.json` (substitui `utils/dados.js`) |
 | [utils/loja.js](utils/loja.js) | Endereço e premiação base padrão da loja |
 | [utils/identidade.js](utils/identidade.js) | IDs `@c.us`/`@lid`, menções, nome do perfil |
 | [utils/listas.js](utils/listas.js) | Adicionar, remover, promover da espera, quem pode sair, posições (`3`, `e1`) |
@@ -322,7 +317,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 | [utils/whatsapp.js](utils/whatsapp.js) | Lê nome e participantes do grupo sem o `getChat()` da biblioteca, que está quebrado |
 | `README.md`, `ALTERACOES.md` | Documentação (o README tem o passo a passo de teste local e instalação para o cliente) |
 | `AGENTS.md` | Contexto completo para próximos agentes de IA / desenvolvedores |
-| [teste/simular.js](teste/simular.js) | Testes automáticos sem WhatsApp (`npm test`, 38 verificações) |
+| [teste/simular.js](teste/simular.js) | Testes automáticos sem WhatsApp (`npm test`, 42 verificações) |
 
 ### Reescritos ou alterados
 
@@ -346,7 +341,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 |---------|--------|
 | `comandos/lista.js` | `!lista` público removido; virou `!lista #nome` em `gestao.js` |
 | `comandos/limpeza.js` | Incorporado a `gestao.js` |
-| `utils/dados.js` | Substituído por `utils/grupos.js` |
+| `utils/dados.js` | Substituído por `utils/armazenamento.js` |
 | `dados_campeonato.json` | Removido **apenas do git**. Continua no servidor até ser importado |
 
 ---
@@ -360,4 +355,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 - O bot usa o **whatsapp-web.js** (WhatsApp Web não oficial). Mudanças do WhatsApp podem exigir atualizar a biblioteca.
 - **A pasta `.wwebjs_auth/` é a "chave" do WhatsApp conectado.** Quem tiver uma cópia dela consegue usar a conta enquanto o aparelho estiver conectado. Nunca compacte nem envie a pasta do projeto com ela dentro (o git já a ignora).
 - **Alertas restantes do `npm audit`** (`basic-ftp`, `extract-zip` e dependentes): estão no `@puppeteer/browsers`, usado só para baixar o Chrome. Não são alcançáveis por mensagens do WhatsApp. A correção automática (`--force`) rebaixaria o whatsapp-web.js para 1.34.2, por isso não foi aplicada.
-- Esta versão foi testada com mensagens simuladas, **não conectada ao WhatsApp real**. Faça um teste em um grupo antes de liberar.
+- **Testes já feitos:**
+  - 20/10/2026: o desenvolvedor testou no WhatsApp real (modo teste), com tudo aprovado.
+  - 21/10/2026: a mudança para listas globais foi validada só com os testes automáticos (`npm test`).
+  - Faça o teste da Parte 1 do README antes de liberar.

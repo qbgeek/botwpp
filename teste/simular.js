@@ -246,12 +246,25 @@ async function testarModoTeste() {
     r = await enviar(G1, '888@lid', '!mesao Gabi');
     conferir('lista excluída para de responder', r.respostas.length === 0, r);
 
-    // --- Grupos independentes, importação e !todos ---
-    r = await enviar(G2, '111@lid', '!ygo Ana');
-    conferir('lista de um grupo não funciona em outro', r.respostas.length === 0, r);
+    // --- Listas globais: funcionam em qualquer grupo ---
+    r = await enviar(G2, '999@lid', '!ygo Zé');
+    conferir('lista criada num grupo funciona em outro grupo', r.texto.includes('✅ *Zé* inscrito!'), r);
 
+    r = await enviar('111@c.us', '111@c.us', '!ygo Ana');
+    conferir('inscrição pelo privado é ignorada', r.respostas.length === 0, r);
+
+    r = await enviar('5581999990000@c.us', '5581999990000@c.us', '!pago ygo 1');
+    conferir('ADM gerencia a lista pelo privado', r.texto.includes('Zé 🆗'), r);
+
+    r = await enviar(G1, ADM, '!listas');
+    conferir('!listas mostra todas as listas e onde foram criadas', r.texto.includes('!ygo') && r.texto.includes('!cup') && r.texto.includes('Criada em: Teste Bot QB'), r);
+
+    // --- Importação e !todos ---
     r = await enviar(G3, ADM, '!importarlegado #liga');
     conferir('importação mantém título e converte 🆗 em pago', r.texto.includes('LIGA QB!') && r.texto.includes('Jogador Pago 🆗') && r.texto.includes('!liga Seu Nome'), r);
+
+    r = await enviar(G3, ADM, '!vagas 20');
+    conferir('sem nome, usa a única lista criada no grupo', r.texto.includes('Vagas definidas (*liga*)'), r);
 
     r = await enviar(G3, '900@lid', '!sair');
     conferir('quem entrou sozinho na versão antiga consegue sair', r.texto.includes('*Jogador Livre* saiu'), r);

@@ -3,15 +3,17 @@
 Bot de WhatsApp da QB Geek para listas de inscrição: Yu-Gi-Oh!, Pokémon, Magic ou qualquer outro evento.
 
 - Você cria listas com o nome que quiser (`#ygo`, `#cup`, `#glc`…), e **cada nome vira o comando de inscrição**: a galera entra com `!ygo Nome`.
-- Cada grupo pode ter várias listas ao mesmo tempo.
+- As listas valem em **todos os grupos** em que o bot está, inclusive grupos criados depois. Basta adicionar o número da QB GeeK ao grupo novo.
 - Sempre que alguém entra ou sai, o bot responde com a lista atualizada.
 
 Este guia tem duas partes. **Faça a Parte 1 antes da Parte 2.**
 
 1. **[Parte 1 — Teste local](#parte-1--teste-local)**: testa tudo com outro número, sem tocar nos grupos reais.
-2. **[Parte 2 — Instalação definitiva](#parte-2--instalação-definitiva)**: coloca o bot novo no número da QB GeeK, em todos os grupos.
+2. **[Parte 2 — Instalação definitiva](#parte-2--instalação-definitiva)**: coloca o bot novo no número da QB GeeK, mantendo o antigo guardado para voltar se precisar.
 
 Depois: [Uso no dia a dia](#uso-no-dia-a-dia) · [Problemas comuns](#problemas-comuns) · [Para desenvolvedores](#para-desenvolvedores)
+
+> A versão antiga do bot está guardada na branch `projeto-legado` do GitHub.
 
 ---
 
@@ -40,18 +42,16 @@ Os dois devem mostrar um número de versão.
 
 # Parte 1 — Teste local
 
-> ⚠️ **Nunca use o número da QB GeeK neste teste.** Se ele for conectado em dois computadores ao mesmo tempo, o bot responde em dobro nos grupos.
+> ⚠️ **Nunca use o número da QB GeeK neste teste.** Se ele for conectado em dois lugares ao mesmo tempo, o bot responde em dobro nos grupos.
 
-## 1.1 Baixe o código numa pasta separada
-
-Use uma pasta **só para o teste**, diferente da pasta do bot que está rodando hoje:
+## 1.1 Baixe o código numa pasta só para o teste
 
 ```powershell
-cd C:\
-git clone https://github.com/qbgeek/botwpp.git bot-teste
+git clone https://github.com/qbgeek/botwpp.git C:\bot-teste
 cd C:\bot-teste
-git checkout feat/multi-eventos
 ```
+
+Para abrir no VS Code: `code .`
 
 ## 1.2 Instale
 
@@ -67,7 +67,7 @@ Leva alguns minutos, porque baixa também o navegador que o bot usa por baixo.
 npm.cmd test
 ```
 
-Deve terminar com **`✅ 38 testes aprovados.`** Esse teste não usa o WhatsApp.
+Deve terminar com **`✅ 42 testes aprovados.`** Esse teste não usa o WhatsApp.
 
 ## 1.4 Crie os grupos de teste
 
@@ -94,7 +94,7 @@ No início, deve aparecer:
 
 ## 1.6 Conecte o número de teste
 
-1. Um **QR code** aparece no PowerShell. Se ficar cortado, aumente a janela.
+1. Um **QR code** aparece no terminal. Se ficar cortado, aumente a janela.
 2. No celular do número de teste: **Configurações → Aparelhos conectados → Conectar um aparelho** → escaneie o QR.
 3. Espere aparecer **`🏆 BOT DA QB ONLINE!`**.
 
@@ -122,15 +122,15 @@ As respostas do bot aparecem como mensagens do número de teste.
 | 12 | Você | `!vagas ygo 5` | Resposta de uma linha |
 | 13 | Você | `!lista #ygo 07/11/2026 18h30 5 2` e depois `!confirmar` | Nova edição com a lista zerada |
 | 14 | Você | `!todos Teste de aviso` | Todos recebem notificação |
-| 15 | Jogador | `!ygo Teste` **no grupo Teste Bot QB 2** | Nenhuma resposta (a lista é do outro grupo) |
+| 15 | Jogador | `!ygo Teste` **no grupo Teste Bot QB 2** | Inscrito: a lista vale em todos os grupos |
 
 A lista completa de comandos está em [Uso no dia a dia](#uso-no-dia-a-dia) e em [ALTERACOES.md](ALTERACOES.md).
 
 ## 1.8 Encerre o teste e apague tudo
 
-1. No PowerShell, aperte **Ctrl+C** para parar o bot.
+1. No terminal, aperte **Ctrl+C** para parar o bot.
 2. No celular do número de teste: **Configurações → Aparelhos conectados** → toque no aparelho do bot → **Desconectar**.
-3. Feche o PowerShell e apague a pasta do teste:
+3. Feche o terminal e apague a pasta do teste:
    ```powershell
    Remove-Item -Recurse -Force C:\bot-teste
    ```
@@ -141,71 +141,62 @@ Pronto: nada do teste fica no computador.
 
 # Parte 2 — Instalação definitiva
 
-# ⚠️ ANTES DE COMEÇAR
+O bot novo vai numa **pasta nova**. A pasta do bot antigo **não é alterada**: ela fica guardada para voltar atrás, se precisar.
 
-> ### 1. Faça a instalação num horário sem inscrições acontecendo. O bot fica fora do ar por alguns minutos.
-> ### 2. **FAÇA BACKUP** dos arquivos `dados_campeonato.json` e `config.json`. O `dados_campeonato.json` foi **removido do git** (tinha nomes de jogadores), e o git pode **apagá-lo** ou **se recusar a atualizar**.
+> ⚠️ **Faça num horário sem inscrições acontecendo.** O bot fica fora do ar por alguns minutos.
+>
+> 🛑 **Os dois bots nunca podem rodar ao mesmo tempo** com o número da QB GeeK, senão tudo é respondido em dobro.
+>
+> 🛑 **Não rode `git pull` na pasta do bot antigo.** Isso trocaria o código dele pelo novo.
 
-Nos passos abaixo, `C:\caminho\do\bot` é a pasta onde o bot roda hoje. Troque pelo caminho real.
+Nos passos abaixo, `C:\caminho\do\bot-antigo` é a pasta onde o bot roda hoje. Troque pelo caminho real.
 
-## 2.1 Pare o bot atual
-
-Na janela onde o bot está rodando, aperte **Ctrl+C**. Se ele roda pelo pm2, use `pm2.cmd stop all`.
-
-## 2.2 Faça o backup
-
-```powershell
-cd C:\caminho\do\bot
-New-Item -ItemType Directory -Force C:\backup-bot
-Copy-Item dados_campeonato.json, config.json C:\backup-bot\
-```
-
-Confira que os dois arquivos estão em `C:\backup-bot`.
-
-## 2.3 Atualize o código
+## 2.1 Baixe o bot novo numa pasta nova
 
 ```powershell
-git fetch
-git checkout feat/multi-eventos
-```
-
-- Se o git reclamar de alterações em `dados_campeonato.json`:
-  1. mova o arquivo para fora da pasta;
-  2. rode o `checkout` de novo;
-  3. traga o arquivo de volta.
-- **Se o `dados_campeonato.json` sumir**, restaure do backup:
-  ```powershell
-  Copy-Item C:\backup-bot\dados_campeonato.json .
-  ```
-
-## 2.4 Instale
-
-```powershell
+git clone https://github.com/qbgeek/botwpp.git C:\bot-qb
+cd C:\bot-qb
 npm.cmd install
 npm.cmd test
 ```
 
-O teste deve terminar com `✅ 38 testes aprovados.`
+O teste deve terminar com `✅ 42 testes aprovados.`
 
-## 2.5 Inicie o bot de verdade
+## 2.2 Copie os 2 arquivos da pasta antiga
+
+| Arquivo | O que tem | Obrigatório? |
+|---|---|---|
+| `dados_campeonato.json` | A lista de inscrição atual | Sim, para importar a lista |
+| `config.json` | Os ADMs cadastrados | Sim, para manter os ADMs |
+
+```powershell
+Copy-Item C:\caminho\do\bot-antigo\dados_campeonato.json C:\bot-qb\
+Copy-Item C:\caminho\do\bot-antigo\config.json C:\bot-qb\
+```
+
+São **cópias**: os originais continuam intactos na pasta antiga. **Não copie a pasta `.wwebjs_auth`**: o bot novo vai pedir um QR code próprio.
+
+## 2.3 Pare o bot antigo
+
+Na janela onde ele está rodando, aperte **Ctrl+C**. Se ele roda pelo pm2, use `pm2.cmd stop all`.
+
+## 2.4 Inicie o bot novo
 
 **Abra uma janela nova do PowerShell.** Assim nenhuma configuração do modo teste fica para trás. Depois:
 
 ```powershell
-cd C:\caminho\do\bot
+cd C:\bot-qb
 npm.cmd start
 ```
 
-> 🛑 **Confira que NÃO aparece a linha `🧪 MODO TESTE`.** Se aparecer, o bot só responderia nos grupos de teste: feche a janela e abra outra.
+> 🛑 **Confira que NÃO aparece a linha `🧪 MODO TESTE`.** Se aparecer, feche a janela e abra outra.
 
-- **Se aparecer um QR code**, escaneie com o celular da **QB GeeK** (**Aparelhos conectados → Conectar um aparelho**).
-- **Se não aparecer**, a sessão antiga foi aproveitada.
+1. Escaneie o QR code com o celular da **QB GeeK** (**Aparelhos conectados → Conectar um aparelho**).
+2. Espere **`🏆 BOT DA QB ONLINE!`**.
 
-Espere **`🏆 BOT DA QB ONLINE!`**.
+## 2.5 Importe a lista atual
 
-## 2.6 Importe a lista que já existe
-
-No grupo onde a lista atual roda, mande **pelo número da QB GeeK**:
+Em qualquer grupo, mande **pelo número da QB GeeK**:
 
 ```
 !importarlegado #liga
@@ -215,9 +206,9 @@ No grupo onde a lista atual roda, mande **pelo número da QB GeeK**:
 - O título "LIGA QB" e os inscritos são mantidos.
 - Quem tinha 🆗 no nome fica marcado como pago.
 
-## 2.7 Crie as listas de cada grupo
+## 2.6 Crie as outras listas
 
-Em cada grupo, mande o comando da lista: nome, data, hora, vagas, reservas e valor.
+Mande o comando de cada lista: nome, data, hora, vagas, reservas e valor. Pode ser **em qualquer grupo ou no privado do bot**, porque a lista vale para todos os grupos.
 
 ```
 !lista #ygo 30/10/2026 18h30 24 12 R$ 20,00
@@ -226,20 +217,18 @@ Em cada grupo, mande o comando da lista: nome, data, hora, vagas, reservas e val
 ```
 
 - **Ordem:** data, hora (**sem espaço**: `10h00AM`), vagas, reservas e, por último, o valor, que pode ter espaços e vírgulas.
-- Um grupo pode ter várias listas (ex.: `#cup` e `#challenge` no grupo de Pokémon).
 - Para mudar o título que aparece no topo: `!settitulo ygo LIGA YU-GI-OH QB`.
+- **Grupo novo no futuro?** Basta adicionar o número da QB GeeK. Todas as listas já funcionam nele.
 
-## 2.8 Cadastre os ADMs
+## 2.7 Cadastre os ADMs
 
-O número da QB GeeK é sempre ADM. Para cada pessoa da equipe, mande num grupo onde ela esteja:
+Os ADMs do `config.json` copiado continuam valendo (confira com `!admins`). Para cadastrar mais alguém, mande num grupo onde a pessoa esteja:
 
 ```
 !addadm @pessoa
 ```
 
-Os ADMs que já existiam no `config.json` continuam valendo. Para conferir a lista, use `!admins`.
-
-## 2.9 Avise a galera
+## 2.8 Avise a galera
 
 > # 🔁 `!participar`, `!lista`, `!ajuda` e `!comandos` DEIXARAM DE EXISTIR
 
@@ -257,7 +246,7 @@ Sugestão de mensagem para cada grupo:
 | `!ajuda` / `!comandos` | `!neymar` / `!ajudaney` |
 | `!limparlista` + `!setdata` + `!sethora` + `!vagas` | `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00` + `!confirmar` |
 
-## 2.10 Deixe o bot funcionando sempre
+## 2.9 Deixe o bot funcionando sempre
 
 **Opção simples:** deixe a janela do PowerShell aberta e impeça o computador de dormir em **Configurações → Sistema → Energia → Suspender: Nunca**.
 
@@ -265,7 +254,7 @@ Sugestão de mensagem para cada grupo:
 
 ```powershell
 npm.cmd install -g pm2 pm2-windows-startup
-cd C:\caminho\do\bot
+cd C:\bot-qb
 pm2.cmd start index.js --name bot-qb
 pm2.cmd save
 pm2-startup.cmd install
@@ -279,11 +268,22 @@ pm2-startup.cmd install
 
 > Se um dia o WhatsApp pedir QR de novo: rode `pm2.cmd stop bot-qb`, depois `npm.cmd start`, escaneie o QR e, quando aparecer ONLINE, aperte Ctrl+C e rode `pm2.cmd start bot-qb`.
 
+## 2.10 Se precisar voltar para o bot antigo
+
+1. Pare o bot novo (Ctrl+C ou `pm2.cmd stop bot-qb`).
+2. Na pasta antiga, rode `npm.cmd start`.
+
+A lista dele é a de **antes da migração**: inscrições feitas no bot novo não voltam.
+
+Depois de alguns dias com o bot novo funcionando bem, remova a conexão antiga no celular (**Aparelhos conectados**) e, se quiser, apague a pasta antiga.
+
 ---
 
 ## Uso no dia a dia
 
 ### Rotina semanal (ADM)
+
+Os comandos de ADM funcionam **nos grupos ou no privado do bot**. No privado, a galera não vê o vai e vem.
 
 | Quero… | Comando |
 |---|---|
@@ -295,19 +295,19 @@ pm2-startup.cmd install
 | Corrigir um nome | `!alterar ygo 3 Nome Certo` |
 | Ver a lista | `!lista #ygo` |
 | Ver todas as listas | `!listas` |
-| Avisar todo mundo | `!todos Começa às 18h30!` |
+| Avisar todo mundo do grupo | `!todos Começa às 18h30!` |
 | Mudar data, hora ou valor | `!setdata ygo 31/10/2026` · `!sethora ygo 19h` · `!setvalor ygo 25,00` |
 | Meta de premiação | `!meta ygo 20` · `!premio1 ygo Booster Box` |
 | Apagar uma lista de vez | `!excluirlista ygo` → `!confirmar` |
 | Ver todos os comandos | `!neymar` |
 
-> Se o grupo tiver **uma lista só**, o nome dela é opcional: `!vagas 28`, `!pago 14`.
+> **Quando o nome da lista é opcional:** se só existir uma lista, ou se só uma lista foi criada no grupo onde você está, `!vagas 28` e `!pago 14` funcionam direto.
 
 ### Jogadores
 
 | Comando | O que faz |
 |---|---|
-| `!ygo Seu Nome` | Entra na lista (troque `ygo` pelo nome da lista) |
+| `!ygo Seu Nome` | Entra na lista, em qualquer grupo (troque `ygo` pelo nome da lista) |
 | `!sair` | Sai da lista. Quem está pago ou foi adicionado por ADM precisa pedir a um ADM |
 | `!meta ygo` | Mostra o desafio da premiação |
 | `!neymar` | Menu |
@@ -320,10 +320,11 @@ pm2-startup.cmd install
 |---|---|
 | "a execução de scripts foi desabilitada neste sistema" | Use `npm.cmd` em vez de `npm` (e `pm2.cmd` em vez de `pm2`) |
 | O bot não responde em nenhum grupo | Veja se apareceu `🧪 MODO TESTE` no início. Se sim, feche a janela e abra outra sem o modo teste |
-| O bot não responde a `!ygo Nome` | A lista existe neste grupo? Confira com `!listas`. As listas só funcionam no grupo onde foram criadas |
-| "🤔 Qual lista?" | O grupo tem mais de uma lista: coloque o nome depois do comando (`!vagas ygo 28`) |
+| O bot não responde a `!ygo Nome` | A lista existe? Confira com `!listas`. A inscrição só funciona em grupos, não no privado |
+| "🤔 Qual lista?" | Existe mais de uma lista: coloque o nome depois do comando (`!vagas ygo 28`) |
 | "Não entendi os dados" ao criar a lista | A hora não pode ter espaço (`10h00AM`). A ordem é data, hora, vagas, reservas, valor |
 | O QR code aparece toda vez | A pasta `.wwebjs_auth` foi apagada ou o aparelho foi desconectado no celular. Escaneie de novo |
+| Tudo é respondido duas vezes | Dois bots estão rodando com o mesmo número. Pare o antigo |
 | O bot parou de funcionar depois de uma atualização do WhatsApp | O WhatsApp muda o site com frequência. Avise o desenvolvedor para atualizar a biblioteca do bot |
 
 ---
@@ -333,6 +334,7 @@ pm2-startup.cmd install
 - **[AGENTS.md](AGENTS.md):** contexto completo do projeto (arquitetura, decisões, testes, problemas conhecidos). Leia antes de alterar.
 - **[ALTERACOES.md](ALTERACOES.md):** tudo o que mudou nesta versão e a referência completa de comandos.
 - **Testes:** `npm test` (sem WhatsApp).
+- **Branches:** `master` tem a versão atual; `projeto-legado` guarda a versão antiga.
 - **Stack:** Node.js + [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js) (WhatsApp Web via Chrome headless). Dados em `dados/listas.json` e `config.json`, ambos fora do git.
 
 ```

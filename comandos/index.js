@@ -14,10 +14,10 @@ const todos = require('./todos');
 
 const {
     normalizarChave,
-    listasDoGrupo,
+    todasAsListas,
     obterLista,
     salvarListas
-} = require('../utils/grupos');
+} = require('../utils/armazenamento');
 
 const { ehAdmin } = require('../utils/config');
 const { resolverIds } = require('../utils/identidade');
@@ -27,32 +27,31 @@ const { montarLista } = require('../utils/formatacao');
 // =========================================================
 // TABELA DE COMANDOS
 // escopo:
-//   global -> funciona em qualquer conversa
+//   global -> funciona em qualquer conversa (grupo ou privado)
 //   grupo  -> só dentro de grupos
-//   lista  -> só em grupos com lista; a lista é o 1º argumento
-//             (opcional quando o grupo tem uma lista só)
+//   lista  -> precisa de uma lista; ela é o 1º argumento (veja resolverLista)
 // admin: true -> exclusivo para ADMs (checado AQUI, antes de executar)
 //
-// As listas criadas pelo ADM viram comandos sozinhas: a lista "ygo"
-// responde a "!ygo Nome" (veja o final de executarComando).
+// As listas são globais e viram comandos sozinhas: a lista "ygo"
+// responde a "!ygo Nome" em qualquer grupo (veja o final de executarComando).
 // =========================================================
 
 const COMANDOS = [
 
     // --- Públicos ---
     { nomes: ['!neymar', '!ajudaney'], escopo: 'global', executar: ajuda },
-    { nomes: ['!sair'], escopo: 'grupo', executar: sair },
+    { nomes: ['!sair'], escopo: 'global', executar: sair },
     // "!meta" é público; "!meta N" é verificado como ADM dentro do comando
     { nomes: ['!meta'], escopo: 'lista', executar: meta },
 
     // --- ADM: listas ---
     // "!lista" sem permissão só recebe uma reação, para não virar spam
-    { nomes: ['!lista'], escopo: 'grupo', admin: true, negarComReacao: true, executar: gestao.lista },
+    { nomes: ['!lista'], escopo: 'global', admin: true, negarComReacao: true, executar: gestao.lista },
     { nomes: ['!listas'], escopo: 'global', admin: true, executar: gestao.listar },
     { nomes: ['!limparlista'], escopo: 'lista', admin: true, executar: gestao.limpar },
     { nomes: ['!excluirlista'], escopo: 'lista', admin: true, executar: gestao.excluir },
-    { nomes: ['!confirmar', '!confirmarlimpeza'], escopo: 'grupo', admin: true, executar: gestao.confirmar },
-    { nomes: ['!importarlegado'], escopo: 'grupo', admin: true, executar: gestao.importarLegado },
+    { nomes: ['!confirmar', '!confirmarlimpeza'], escopo: 'global', admin: true, executar: gestao.confirmar },
+    { nomes: ['!importarlegado'], escopo: 'global', admin: true, executar: gestao.importarLegado },
     { nomes: ['!todos'], escopo: 'grupo', admin: true, executar: todos },
 
     // --- ADM: configuração da lista ---
@@ -93,22 +92,29 @@ function comandoExiste(nome) {
 }
 
 
-// Descobre a lista pelo 1º argumento ("ygo" ou "#ygo").
-// Se o grupo tiver uma lista só, o nome pode ser omitido.
+// Descobre a lista pelo 1º argumento ("ygo" ou "#ygo"). Sem o nome:
+//   - se só existe uma lista, usa ela;
+//   - senão, se só uma lista foi criada neste grupo, usa ela.
 function resolverLista(chatId, args) {
 
     const [primeira] = args.split(/\s+/, 1);
 
-    const pelaPrimeira = primeira ? obterLista(chatId, normalizarChave(primeira)) : null;
+    const pelaPrimeira = primeira ? obterLista(normalizarChave(primeira)) : null;
 
     if (pelaPrimeira) {
         return { lista: pelaPrimeira, args: args.slice(primeira.length).trim() };
     }
 
-    const listas = Object.values(listasDoGrupo(chatId));
+    const listas = todasAsListas();
 
     if (listas.length === 1) {
         return { lista: listas[0], args };
+    }
+
+    const doGrupo = listas.filter(l => l.grupoOrigem === chatId);
+
+    if (doGrupo.length === 1) {
+        return { lista: doGrupo[0], args };
     }
 
     return { lista: null, listas };
@@ -170,9 +176,10 @@ module.exports = async function executarComando(msg, client) {
 
     const comando = MAPA.get(nome);
 
-    // Não é um comando fixo: pode ser o nome de uma lista do grupo (!ygo Nome)
+    // Não é um comando fixo: pode ser o nome de uma lista (!ygo Nome).
+    // Inscrição só em grupos, para a lista atualizada aparecer para todos.
     const listaDinamica =
-        !comando && ehGrupo ? obterLista(chatId, normalizarChave(nome)) : null;
+        !comando && ehGrupo ? obterLista(normalizarChave(nome)) : null;
 
     if (!comando && !listaDinamica) {
         return;
@@ -200,7 +207,7 @@ module.exports = async function executarComando(msg, client) {
 
     }
 
-    if (comando.escopo !== 'global' && !ehGrupo) {
+    if (comando.escopo === 'grupo' && !ehGrupo) {
         return msg.reply('⚠️ Esse comando só funciona dentro de um grupo.');
     }
 
@@ -214,8 +221,8 @@ module.exports = async function executarComando(msg, client) {
 
                 return msg.reply(
                     ehAdm
-                        ? '⚠️ Este grupo ainda não tem lista.\n\nCrie com: *!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00*'
-                        : '⚠️ Não há listas abertas neste grupo.'
+                        ? '⚠️ Ainda não existe nenhuma lista.\n\nCrie com: *!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00*'
+                        : '⚠️ Não há listas abertas no momento.'
                 );
 
             }
@@ -223,7 +230,7 @@ module.exports = async function executarComando(msg, client) {
             const nomes = resolvido.listas.map(l => `*${l.comando}*`).join(', ');
 
             return msg.reply(
-                `🤔 Qual lista? Este grupo tem: ${nomes}.\n\n` +
+                `🤔 Qual lista? Listas abertas: ${nomes}.\n\n` +
                 `Exemplo: *${nome} ${resolvido.listas[0].comando} ...*`
             );
 

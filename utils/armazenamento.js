@@ -1,14 +1,12 @@
 // =========================================================
 // ARMAZENAMENTO DAS LISTAS
-// Cada grupo pode ter várias listas, identificadas pelo nome
-// que o ADM escolheu (ex.: "ygo" -> comando !ygo).
+// As listas são globais: uma lista criada em qualquer grupo
+// funciona em todos os grupos do bot (ex.: "ygo" -> !ygo).
 //
 // dados/listas.json
 // {
-//   "<id do grupo>": {
-//     "nome": "Nome do grupo",
-//     "listas": { "ygo": { ...lista }, "cup": { ...lista } }
-//   }
+//   "ygo": { ...lista, "grupoOrigem": "<id do grupo onde foi criada>" },
+//   "cup": { ...lista }
 // }
 // =========================================================
 
@@ -64,6 +62,8 @@ function normalizarLista(lista) {
 
     lista.comando ??= lista.chave;
     lista.titulo ??= lista.comando.toUpperCase();
+    lista.grupoOrigem ??= null;
+    lista.nomeGrupoOrigem ??= '';
 
     lista.dataCamp ??= '---';
     lista.horaCamp ??= '---';
@@ -90,89 +90,96 @@ function normalizarLista(lista) {
 }
 
 
-const grupos = lerJson(CAMINHO_LISTAS, {});
+// Converte o formato intermediário (listas separadas por grupo) no formato global
+function converterFormatoPorGrupo(dados) {
 
-for (const grupo of Object.values(grupos)) {
-    Object.values(grupo.listas).forEach(normalizarLista);
+    const listas = {};
+
+    for (const [chatId, grupo] of Object.entries(dados)) {
+
+        for (const [chave, lista] of Object.entries(grupo.listas)) {
+
+            if (!Object.hasOwn(listas, chave)) {
+                listas[chave] = { ...lista, grupoOrigem: chatId, nomeGrupoOrigem: grupo.nome || '' };
+            }
+
+        }
+
+    }
+
+    return listas;
+
 }
+
+
+function carregar() {
+
+    const dados = lerJson(CAMINHO_LISTAS, {});
+
+    const formatoPorGrupo = Object.values(dados).some(v => v && typeof v.listas === 'object');
+
+    const listas = formatoPorGrupo ? converterFormatoPorGrupo(dados) : dados;
+
+    Object.values(listas).forEach(normalizarLista);
+
+    return listas;
+
+}
+
+
+const listas = carregar();
 
 
 function salvarListas() {
 
-    salvarJson(CAMINHO_LISTAS, grupos);
-
-}
-
-
-function listasDoGrupo(chatId) {
-
-    return Object.hasOwn(grupos, chatId) ? grupos[chatId].listas : {};
-
-}
-
-
-// Object.hasOwn evita que nomes como "constructor" encontrem
-// propriedades internas do JavaScript em vez de uma lista
-function obterLista(chatId, chave) {
-
-    const listas = listasDoGrupo(chatId);
-
-    return Object.hasOwn(listas, chave) ? listas[chave] : null;
-
-}
-
-
-// "comando" é o nome como o ADM digitou (ex.: "mesão"); a chave é a versão normalizada
-function criarLista(chatId, nomeGrupo, comando, campos = {}) {
-
-    grupos[chatId] ??= { nome: '', listas: {} };
-
-    if (nomeGrupo) {
-        grupos[chatId].nome = nomeGrupo;
-    }
-
-    const chave = normalizarChave(comando);
-
-    grupos[chatId].listas[chave] = normalizarLista({
-        chave,
-        comando,
-        ...campos,
-        criadoEm: new Date().toISOString()
-    });
-
-    salvarListas();
-
-    return grupos[chatId].listas[chave];
-
-}
-
-
-function removerLista(chatId, chave) {
-
-    delete grupos[chatId].listas[chave];
-
-    if (Object.keys(grupos[chatId].listas).length === 0) {
-        delete grupos[chatId];
-    }
-
-    salvarListas();
+    salvarJson(CAMINHO_LISTAS, listas);
 
 }
 
 
 function todasAsListas() {
 
-    const resultado = [];
+    return Object.values(listas);
 
-    for (const [chatId, grupo] of Object.entries(grupos)) {
+}
 
-        for (const lista of Object.values(grupo.listas)) {
-            resultado.push({ chatId, nomeGrupo: grupo.nome, lista });
-        }
 
-    }
+// Object.hasOwn evita que nomes como "constructor" encontrem
+// propriedades internas do JavaScript em vez de uma lista
+function obterLista(chave) {
 
-    return resultado;
+    return Object.hasOwn(listas, chave) ? listas[chave] : null;
+
+}
+
+
+// "comando" é o nome como o ADM digitou (ex.: "mesão"); a chave é a versão normalizada.
+// "origem" guarda o grupo onde a lista foi criada (usado como atalho nos comandos de ADM).
+function criarLista(comando, campos = {}, origem = {}) {
+
+    const chave = normalizarChave(comando);
+
+    listas[chave] = normalizarLista({
+        chave,
+        comando,
+        ...campos,
+        grupoOrigem: origem.chatId || null,
+        nomeGrupoOrigem: origem.nomeGrupo || '',
+        criadoEm: new Date().toISOString()
+    });
+
+    salvarListas();
+
+    return listas[chave];
+
+}
+
+
+function removerLista(chave) {
+
+    delete listas[chave];
+
+    salvarListas();
 
 }
 
@@ -200,11 +207,10 @@ function marcarLegadoImportado() {
 
 module.exports = {
     normalizarChave,
-    listasDoGrupo,
+    todasAsListas,
     obterLista,
     criarLista,
     removerLista,
-    todasAsListas,
     salvarListas,
     lerLegado,
     marcarLegadoImportado

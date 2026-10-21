@@ -7,7 +7,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele resume o que o bot faz,
 ## 1. Regras obrigatórias
 
 1. **Nada pode creditar ferramentas de IA.** Sem `Co-Authored-By`, sem "Generated with…", nem em commits, PRs, documentos ou comentários. O autor dos commits é o usuário git configurado (`rafael`).
-2. **Não abra PR nem faça merge na `master` sem pedido explícito.** O trabalho fica na branch `feat/multi-eventos`; commit e push nela foram autorizados.
+2. **Não abra PR nem altere a `master` sem pedido explícito.** A `master` tem a versão atual (o merge de `feat/multi-eventos` foi pedido pelo Rafael em 21/10/2026). A versão antiga está preservada na branch `projeto-legado` e **não deve ser alterada**.
 3. **Nunca conecte o número da empresa (QB GeeK) fora do servidor de produção.** Dois bots no mesmo número respondem em dobro nos grupos.
 4. **Testes com WhatsApp real usam outro número e o modo teste** (`BOT_SOMENTE_GRUPO`, seção 6). Ao terminar, desvincule o aparelho (`client.logout()`) e apague `.wwebjs_auth/`.
 5. **Dados pessoais**: `dados/`, `config.json`, `dados_campeonato*.json` e `.wwebjs_auth/` nunca vão para o git (já estão no `.gitignore`).
@@ -19,10 +19,11 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele resume o que o bot faz,
 
 - **Cliente:** QB Geek, loja de card games em Recife (R. da Hora, 345 - Loja 14 - Espinheiro). Contato: Artur Rodrigues, ADM dos grupos.
 - **Dono do projeto:** Rafael Varela (desenvolvedor contratado).
-- **O que o bot faz:** gerencia listas de inscrição de campeonatos (Pokémon, Yu-Gi-Oh!, Magic etc.) em grupos de WhatsApp. O ADM cria listas com nome livre (`!lista #ygo …`) e cada nome vira o comando de inscrição (`!ygo Nome`). Há fila de espera, marcação de pago (🆗), meta de premiação e avisos.
+- **O que o bot faz:** gerencia listas de inscrição de campeonatos (Pokémon, Yu-Gi-Oh!, Magic etc.) em grupos de WhatsApp. O ADM cria listas com nome livre (`!lista #ygo …`) e cada nome vira o comando de inscrição (`!ygo Nome`), válido em **todos os grupos** do bot. Há fila de espera, marcação de pago (🆗), meta de premiação e avisos.
 - **Repositório:** `https://github.com/qbgeek/botwpp`
-  - `master`: versão antiga, a que roda em produção hoje (commit `e54d45c`).
-  - `feat/multi-eventos`: todo o trabalho novo, **ainda não instalado em produção**.
+  - `master`: versão nova (todo o trabalho descrito aqui).
+  - `projeto-legado`: versão antiga (commit `e54d45c`), a que ainda roda no computador do cliente até a instalação da Parte 2 do README.
+  - `feat/multi-eventos`: branch onde o trabalho foi feito; mantida como histórico.
 
 ## 3. Stack
 
@@ -55,7 +56,7 @@ comandos/todos.js        !todos [mensagem] (menção silenciosa de todos)
 comandos/ajuda.js        !neymar / !ajudaney
 comandos/admins.js       !addadm, !deladm, !admins
 comandos/id.js           !id (ADM, fora do menu)
-utils/grupos.js          Armazenamento: dados/listas.json, normalização, migração do legado
+utils/armazenamento.js   Listas globais em dados/listas.json, normalização, migração do legado
 utils/listas.js          Operações nos jogadores (adicionar, remover, promover, posições e1)
 utils/formatacao.js      Texto da lista no layout original do cliente
 utils/efeitos.js         Marcação de promovidos, aviso de meta
@@ -67,7 +68,7 @@ utils/config.js          config.json (ADMs) e ehAdmin()
 utils/arquivoJson.js     Leitura com backup de arquivo corrompido; gravação atômica
 utils/loja.js            Endereço e premiação base padrão
 utils/barraMeta.js       Barra de progresso 🟥🟨🟩
-teste/simular.js         38 verificações sem WhatsApp, numa cópia temporária do código
+teste/simular.js         42 verificações sem WhatsApp, numa cópia temporária do código
 ```
 
 **Fluxo de uma mensagem:** `message_create`, depois `modoTeste.foraDoTeste`, depois `executarComando`. O roteador:
@@ -81,8 +82,9 @@ O `ctx` contém `msg`, `client`, `nome`, `args`, `chatId`, `ehGrupo`, `idUsuario
 
 **Regras de negócio importantes:**
 - **ADM:** o número do bot (`msg.fromMe`) é sempre ADM; os demais ficam em `config.json` (`!addadm`).
-- **Listas:** cada uma pertence ao grupo onde foi criada; um grupo pode ter várias. A chave é normalizada sem acento e em minúsculas (`!MESÃO` = `!mesao`). Nome de comando do bot não pode virar lista. A busca usa `Object.hasOwn`, por causa do caso `constructor`.
-- **Nome da lista nos comandos de ADM:** é o 1º argumento (`!vagas ygo 28`) e é opcional se o grupo tiver uma lista só.
+- **Listas são globais:** valem em todos os grupos do bot, inclusive grupos criados depois (pedido do cliente). O nome é único no bot inteiro. A chave é normalizada sem acento e em minúsculas (`!MESÃO` = `!mesao`). Nome de comando do bot não pode virar lista. A busca usa `Object.hasOwn`, por causa do caso `constructor`. Cada lista guarda `grupoOrigem` e `nomeGrupoOrigem`.
+- **Onde cada comando funciona:** a inscrição (`!ygo Nome`) só em grupos. Os comandos de ADM sobre listas funcionam em grupos e no privado do bot. O `!todos` só em grupos.
+- **Nome da lista nos comandos de ADM:** é o 1º argumento (`!vagas ygo 28`). É opcional se existir uma lista só, ou se só uma lista tiver `grupoOrigem` igual ao chat atual (`resolverLista` em `comandos/index.js`).
 - **Quando o bot mostra a lista inteira:** só quando muda gente nela. Ajustes de configuração respondem numa linha. A lista mostra apenas até o último nome.
 - **Quem sai sozinho:** quem está pago (`pago`) ou foi adicionado por ADM (`adicionadoPorAdm`) **não** usa `!sair`; só um ADM remove.
 - **Fila de espera:** ao aumentar `!vagas`, ela sobe automaticamente e quem sobe é marcado com @.
@@ -98,7 +100,8 @@ Os pedidos vieram por WhatsApp. Estas são as decisões aprovadas pelo Rafael:
 | Comandos de ADM só para ADM; menu dividido | Roteador checa antes; `!neymar` mostra a parte de ADM só a ADMs |
 | `!ajuda`/`!comandos` passam a ser `!neymar` (e `!ajudaney`) | Os antigos não respondem |
 | Tirar `!id` do menu | Virou comando só de ADM, fora do menu |
-| Listas criadas pelo ADM: `!lista #ygo`; inscrição `!ygo Nome` | Listas dinâmicas por grupo |
+| Listas criadas pelo ADM: `!lista #ygo`; inscrição `!ygo Nome` | Listas dinâmicas |
+| Comandos funcionando em qualquer grupo (o cliente vai criar grupos novos) | Listas globais (21/10/2026); antes eram por grupo. O formato antigo de `dados/listas.json` é convertido ao carregar |
 | Listas previstas: GLC, YGO, MESÃO, CUP, PRERELEASE, CHALLENGE, PREMIERE | Qualquer nome; não aparecem no menu |
 | Criar com data/hora/valor num comando só | `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00`: valor por último, aceita espaços e vírgulas; recriar = nova edição com `!confirmar` |
 | Mostrar a lista ao se inscrever, só até o último nome, no layout original | `formatacao.js` replica o layout do cliente |
@@ -125,23 +128,23 @@ O teste roda numa cópia temporária, então não toca nos dados do projeto. Ao 
 
 **Diagnóstico avançado:** com o bot rodando, o Chrome expõe a porta de depuração em `.wwebjs_auth/session/DevToolsActivePort`. Dá para usar `puppeteer.connect` e `page.evaluate` para inspecionar `window.require('WAWebCollections')`. Use **só para leitura** e com autorização do dono do número.
 
-### Validação já feita (20/10/2026)
-- O Rafael testou todos os blocos com o número pessoal em modo teste, e todos passaram.
-- A sessão foi desvinculada via `logout`, e todos os resíduos foram apagados.
+### Validação já feita
+- **20/10/2026:** o Rafael testou todos os blocos com o número pessoal em modo teste, e todos passaram. A sessão foi desvinculada via `logout`, e todos os resíduos foram apagados.
+- **21/10/2026:** a mudança para listas globais foi validada só com `npm test` (42 verificações). **Ainda não foi testada no WhatsApp real.**
 
 ## 7. Estado atual e próximos passos
 
-**Pronto na branch `feat/multi-eventos`:** tudo da seção 5, mais as correções listadas em `ALTERACOES.md` (seção 2, itens 1 a 25).
+**Pronto na `master`:** tudo da seção 5, mais as correções listadas em `ALTERACOES.md` (seção 2, itens 1 a 25).
 
 **Falta fazer:**
-1. O cliente valida localmente (passo a passo no `README.md`).
-2. Merge na `master`, só quando o Rafael pedir.
-3. Instalação em produção na máquina do cliente (README, Parte 2):
-   - backup de `dados_campeonato.json` e `config.json`;
-   - `!importarlegado #nome` no grupo atual;
-   - criar as listas nos outros grupos.
-4. Avisar os jogadores da troca de comandos (`!participar` → `!nomedalista`).
-5. Acompanhar atualizações do `whatsapp-web.js`. Ao atualizar, rode `npm test` e verifique se `msg.getChat()` voltou a funcionar (seção 8).
+1. O cliente valida localmente (README, Parte 1).
+2. Instalação na máquina do cliente (README, Parte 2):
+   - clonar a `master` numa **pasta nova**, sem mexer na pasta do bot antigo;
+   - copiar `dados_campeonato.json` e `config.json` da pasta antiga;
+   - parar o bot antigo, iniciar o novo e escanear o QR;
+   - `!importarlegado #nome` e criar as demais listas.
+3. Avisar os jogadores da troca de comandos (`!participar` → `!nomedalista`).
+4. Acompanhar atualizações do `whatsapp-web.js`. Ao atualizar, rode `npm test` e verifique se `msg.getChat()` voltou a funcionar (seção 8).
 
 ## 8. Problemas conhecidos e armadilhas
 
@@ -165,7 +168,7 @@ O teste roda numa cópia temporária, então não toca nos dados do projeto. Ao 
 - Todo comando novo entra na tabela `COMANDOS` de `comandos/index.js` com `escopo` e `admin`; nunca cheque permissão dentro do comando, exceto em casos mistos como o `!meta`.
 - Mensagens do bot com emoji no início e negrito do WhatsApp (`*texto*`). Respostas nunca podem começar com `!`, porque o bot lê as próprias mensagens.
 
-## 10. Histórico de commits (branch `feat/multi-eventos`)
+## 10. Histórico de commits (feitos em `feat/multi-eventos`, hoje na `master`)
 
 | Commit | Data | Resumo |
 |---|---|---|
@@ -175,4 +178,5 @@ O teste roda numa cópia temporária, então não toca nos dados do projeto. Ao 
 | `9f25f18` | 19/10/2026 | Modo teste (`BOT_SOMENTE_GRUPO`) |
 | `4fc1a63` | 20/10/2026 | Sandbox do Chrome, `Object.hasOwn`, `npm audit fix` |
 | `17283df` | 20/10/2026 | Contorno do `getChat()` quebrado |
-| (este) | 20/10/2026 | `npm test`, `AGENTS.md`, README para o cliente |
+| `9f0e1ee` | 20/10/2026 | `npm test`, `AGENTS.md`, README para o cliente |
+| (este) | 21/10/2026 | Listas globais (valem em qualquer grupo), ADM pelo privado, instalação em pasta nova |
