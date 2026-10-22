@@ -146,6 +146,13 @@ async function testarModoTeste() {
 
     r = await enviar(G1, '111@lid', '!neymar');
     conferir('!neymar de jogador não mostra comandos de ADM', r.texto.includes('COMANDOS') && !r.texto.includes('ADM —'), r);
+    conferir('!neymar tem o título pedido pelo cliente', r.texto.startsWith('🤖 *COMANDOS CYBERNEMAR 100% QB*'), r);
+
+    r = await enviar(G1, '111@lid', '!ajudaney');
+    conferir('!ajudaney mostra o mesmo menu', r.texto.startsWith('🤖 *COMANDOS CYBERNEMAR 100% QB*'), r);
+
+    r = await enviar(G1, '111@lid', '!todos Teste');
+    conferir('!todos é só para ADM', r.texto.includes('Acesso negado') && r.respostas[0].mencoes.length === 0, r);
 
     r = await enviar(G1, '111@lid', '!vagas 10');
     conferir('comando de ADM negado para jogador', r.texto.includes('Acesso negado'), r);
@@ -271,6 +278,7 @@ async function testarModoTeste() {
 
     r = await enviar(G1, ADM, '!todos Começa às 18h30!');
     conferir('!todos marca todos os participantes', r.respostas[0]?.mencoes.length === 2, r);
+    conferir('!todos mantém o texto e mostra os @ de todos', r.texto.startsWith('📢 🔔 Começa às 18h30!') && r.texto.includes('@111') && r.texto.includes('@222'), r);
 
     await testarModoTeste();
 

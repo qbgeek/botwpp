@@ -1,12 +1,9 @@
-const { LOJA } = require('../utils/loja');
-
-
 // !neymar (ou !ajudaney). Os comandos de cada lista (!ygo, !cup...)
 // não aparecem aqui: o comando de entrada é mostrado no fim da própria lista.
 module.exports = async function ajuda(ctx) {
 
     const linhas = [
-        `🤖 *COMANDOS ${LOJA.nome}*`,
+        '🤖 *COMANDOS CYBERNEMAR 100% QB*',
         '',
         '📝 *!nomedalista Seu Nome* — entra na lista (o comando aparece no fim de cada lista)',
         '🏃 *!sair* — sai da lista',

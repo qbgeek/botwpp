@@ -52,7 +52,7 @@ comandos/configuracao.js !setdata, !sethora, !setvalor, !settitulo, !setlocal, !
 comandos/vagas.js        !vagas (promove a fila de espera), !espera
 comandos/meta.js         !meta (público) e !meta N (ADM)
 comandos/premios.js      !premio1/2/3, !limparpremios
-comandos/todos.js        !todos [mensagem] (menção silenciosa de todos)
+comandos/todos.js        !todos [mensagem]: marca todos do grupo, com os @ visíveis (só ADM)
 comandos/ajuda.js        !neymar / !ajudaney
 comandos/admins.js       !addadm, !deladm, !admins
 comandos/id.js           !id (ADM, fora do menu)
@@ -68,7 +68,7 @@ utils/config.js          config.json (ADMs) e ehAdmin()
 utils/arquivoJson.js     Leitura com backup de arquivo corrompido; gravação atômica
 utils/loja.js            Endereço e premiação base padrão
 utils/barraMeta.js       Barra de progresso 🟥🟨🟩
-teste/simular.js         42 verificações sem WhatsApp, numa cópia temporária do código
+teste/simular.js         46 verificações sem WhatsApp, numa cópia temporária do código
 ```
 
 **Fluxo de uma mensagem:** `message_create`, depois `modoTeste.foraDoTeste`, depois `executarComando`. O roteador:
@@ -98,7 +98,8 @@ Os pedidos vieram por WhatsApp. Estas são as decisões aprovadas pelo Rafael:
 | Pedido / decisão | Implementação |
 |---|---|
 | Comandos de ADM só para ADM; menu dividido | Roteador checa antes; `!neymar` mostra a parte de ADM só a ADMs |
-| `!ajuda`/`!comandos` passam a ser `!neymar` (e `!ajudaney`) | Os antigos não respondem |
+| `!ajuda`/`!comandos` passam a ser `!neymar` (e `!ajudaney`) | Os antigos não respondem. Título do menu: "🤖 *COMANDOS CYBERNEMAR 100% QB*" |
+| `!todos` marca todos do grupo onde foi dado, só se for ADM | Texto mantido + @ visíveis de cada participante |
 | Tirar `!id` do menu | Virou comando só de ADM, fora do menu |
 | Listas criadas pelo ADM: `!lista #ygo`; inscrição `!ygo Nome` | Listas dinâmicas |
 | Comandos funcionando em qualquer grupo (o cliente vai criar grupos novos) | Listas globais (21/10/2026); antes eram por grupo. O formato antigo de `dados/listas.json` é convertido ao carregar |
@@ -179,4 +180,5 @@ O teste roda numa cópia temporária, então não toca nos dados do projeto. Ao 
 | `4fc1a63` | 20/10/2026 | Sandbox do Chrome, `Object.hasOwn`, `npm audit fix` |
 | `17283df` | 20/10/2026 | Contorno do `getChat()` quebrado |
 | `9f0e1ee` | 20/10/2026 | `npm test`, `AGENTS.md`, README para o cliente |
-| (este) | 21/10/2026 | Listas globais (valem em qualquer grupo), ADM pelo privado, instalação em pasta nova |
+| `50ffd69` | 21/10/2026 | Listas globais (valem em qualquer grupo), ADM pelo privado, instalação em pasta nova |
+| (este) | 21/10/2026 | `!todos` com @ visíveis, título "CYBERNEMAR 100% QB" no menu, aviso de timer em reconexões |

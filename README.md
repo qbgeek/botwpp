@@ -67,7 +67,7 @@ Leva alguns minutos, porque baixa também o navegador que o bot usa por baixo.
 npm.cmd test
 ```
 
-Deve terminar com **`✅ 42 testes aprovados.`** Esse teste não usa o WhatsApp.
+Deve terminar com **`✅ 46 testes aprovados.`** Esse teste não usa o WhatsApp.
 
 ## 1.4 Crie os grupos de teste
 
@@ -160,7 +160,7 @@ npm.cmd install
 npm.cmd test
 ```
 
-O teste deve terminar com `✅ 42 testes aprovados.`
+O teste deve terminar com `✅ 46 testes aprovados.`
 
 ## 2.2 Copie os 2 arquivos da pasta antiga
 

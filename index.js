@@ -64,9 +64,21 @@ client.on('auth_failure', msg => {
     console.log(msg);
 });
 
+// O WhatsApp Web pode disparar "ready" de novo ao reconectar (queda de
+// internet, celular offline, atualização do site). O tempo de inicialização
+// só é medido na primeira vez; nas seguintes, apenas registra a reconexão.
+let jaFicouPronto = false;
+
 client.on('ready', () => {
 
     clearTimeout(avisoDemora);
+
+    if (jaFicouPronto) {
+        console.log(`🔄 WhatsApp reconectado (${new Date().toLocaleString('pt-BR')})`);
+        return;
+    }
+
+    jaFicouPronto = true;
 
     console.timeEnd("Tempo WhatsApp");
     console.timeEnd("Tempo total");

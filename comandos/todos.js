@@ -1,7 +1,9 @@
 const { lerChat } = require('../utils/whatsapp');
+const { mencionar } = require('../utils/identidade');
 
 
-// Marca todos os participantes do grupo sem poluir o texto com @nomes
+// Marca todos os participantes do grupo onde o comando foi dado (só ADM, ver comandos/index.js).
+// Os @ ficam visíveis no texto, para cada pessoa ver que foi marcada.
 module.exports = async function todos(ctx) {
 
     const chat = await lerChat(ctx.client, ctx.chatId);
@@ -12,6 +14,8 @@ module.exports = async function todos(ctx) {
 
     const aviso = ctx.args || 'Atenção, pessoal!';
 
-    return ctx.responder(`📢 🔔 ${aviso}`, { mentions: chat.participantes });
+    const marcacoes = chat.participantes.map(mencionar).join(' ');
+
+    return ctx.responder(`📢 🔔 ${aviso}\n\n${marcacoes}`, { mentions: chat.participantes });
 
 };
