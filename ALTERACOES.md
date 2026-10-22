@@ -23,7 +23,7 @@ O passo a passo de teste e instalação está no [README.md](README.md).
 | Menu dividido entre público e ADM | O `!neymar` só mostra a parte de ADM para ADMs |
 | `!ajuda` / `!comandos` passa a ser `!neymar` | `!neymar` (e `!ajudaney`). `!ajuda` e `!comandos` não respondem mais |
 | Título do menu: "COMANDOS CYBERNEMAR 100% QB" | O `!neymar` e o `!ajudaney` abrem com 🤖 *COMANDOS CYBERNEMAR 100% QB* |
-| `!todos` deve marcar todos do grupo, se quem mandou for ADM | Mantém o texto e mostra os @ de todos os participantes do grupo onde foi dado |
+| `!todos` deve marcar todos do grupo, se quem mandou for ADM, com um único @all (sem o @ de cada um) | Texto mantido + `@all`. Todos são marcados por baixo, de forma invisível, e o bot pede o @all nativo do WhatsApp |
 | Tirar o `!id` do menu | Fora do menu; virou comando só de ADM |
 | "`!lista ygo` cria uma lista pro comando `!ygo`"; inscrição com "`!ygo lucas chagas`" | `!lista #ygo` cria; `!ygo Nome` inscreve |
 | Comandos funcionando em qualquer grupo (o cliente pode criar grupos novos) | Listas globais: valem em todos os grupos do bot, sem configuração. Os comandos de ADM também funcionam no privado do bot |
@@ -68,7 +68,7 @@ O passo a passo de teste e instalação está no [README.md](README.md).
 | 22 | O Chrome do bot rodava com `--no-sandbox` em qualquer sistema | No Windows, todo o navegador (que exibe as mensagens recebidas) rodava sem isolamento do resto do computador | O sandbox só é desligado no Linux, onde rodar como root/Docker exige isso |
 | 23 | Um nome de lista igual a uma propriedade interna do JavaScript (`constructor`) era confundido com uma lista | `!constructor` causava erro e um ADM podia alterar um objeto interno | Busca da lista feita só nas listas cadastradas (`Object.hasOwn`) |
 | 25 | `msg.getChat()` do whatsapp-web.js 1.34.7 falha nas versões atuais do WhatsApp Web ("No key or key range specified" ao buscar a última mensagem do grupo) | `!todos` não funcionava e o modo teste ignorava tudo | Leitura direta só do nome e dos participantes do grupo ([utils/whatsapp.js](utils/whatsapp.js)) |
-| 26 | `!todos` marcava as pessoas "em silêncio" (notificava, mas o texto não mostrava os @) | O cliente não via a marcação de todos | O texto continua igual e, abaixo dele, aparece o @ de cada participante do grupo onde o comando foi dado (só ADM) |
+| 26 | `!todos` marcava as pessoas "em silêncio" (notificava, mas o texto não mostrava marcação) | O cliente não via a marcação de todos | O texto continua igual e termina com `@all`. Todos os participantes vão marcados de forma invisível (garante a notificação), e o bot pede o @all nativo do WhatsApp (`nonJidMentions`); se o WhatsApp Web recusar, reenvia sem ele |
 | 27 | Aviso "Timer 'Tempo WhatsApp' does not exist" no terminal | Só poluía o log: aparecia quando o WhatsApp Web reconectava e disparava "pronto" de novo | O tempo é medido só na primeira vez; nas reconexões o terminal mostra "🔄 WhatsApp reconectado" com data e hora |
 | 24 | Dependências com vulnerabilidades conhecidas | `npm audit` apontava 12 alertas | `npm audit fix` sem quebra: 9 restantes, todos na cadeia usada só para baixar o Chrome (ver seção 10) |
 
@@ -208,7 +208,7 @@ Créditos em loja.
 | **"🎉🎊 META ATINGIDA!"** | No momento em que a meta é batida, **na mesma resposta** (sem mensagem extra) |
 | **"🔒 Essa foi a última vaga, lista completa!"** | Quando a lista principal lota |
 | **🆗 ao lado do nome** | Jogadores marcados com `!pago` |
-| **Marcação de todos** | `!todos [mensagem]` (só ADM) marca todos os participantes do grupo, com os @ visíveis no texto |
+| **Marcação de todos** | `!todos [mensagem]` (só ADM) marca todos do grupo com um único `@all` |
 
 ---
 
@@ -321,7 +321,7 @@ O passo a passo completo está no [README.md](README.md), na **Parte 2**. Em res
 | [utils/whatsapp.js](utils/whatsapp.js) | Lê nome e participantes do grupo sem o `getChat()` da biblioteca, que está quebrado |
 | `README.md`, `ALTERACOES.md` | Documentação (o README tem o passo a passo de teste local e instalação para o cliente) |
 | `AGENTS.md` | Contexto completo para próximos agentes de IA / desenvolvedores |
-| [teste/simular.js](teste/simular.js) | Testes automáticos sem WhatsApp (`npm test`, 46 verificações) |
+| [teste/simular.js](teste/simular.js) | Testes automáticos sem WhatsApp (`npm test`, 48 verificações) |
 
 ### Reescritos ou alterados
 

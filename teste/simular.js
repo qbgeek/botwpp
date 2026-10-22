@@ -64,7 +64,11 @@ const client = {
 };
 
 
-// Envia uma mensagem e devolve o que o bot fez: { respostas: [{texto, mencoes}], reacoes: [] }
+// Simula o WhatsApp Web recusando campos extras na mensagem (teste do plano B do !todos)
+let falharComExtra = false;
+
+
+// Envia uma mensagem e devolve o que o bot fez: { respostas: [{texto, mencoes, extra}], reacoes: [] }
 async function enviar(chat, autor, body, mencoes = []) {
 
     const fromMe = autor === 'BOT';
@@ -80,7 +84,13 @@ async function enviar(chat, autor, body, mencoes = []) {
         to: fromMe ? chat : BOT,
         mentionedIds: mencoes,
         async reply(texto, chatId, opcoes = {}) {
-            resultado.respostas.push({ texto, mencoes: opcoes.mentions || [] });
+
+            if (falharComExtra && opcoes.extra) {
+                throw new Error('campo extra recusado (simulado)');
+            }
+
+            resultado.respostas.push({ texto, mencoes: opcoes.mentions || [], extra: opcoes.extra });
+
         },
         async react(emoji) {
             resultado.reacoes.push(emoji);
@@ -278,7 +288,14 @@ async function testarModoTeste() {
 
     r = await enviar(G1, ADM, '!todos Começa às 18h30!');
     conferir('!todos marca todos os participantes', r.respostas[0]?.mencoes.length === 2, r);
-    conferir('!todos mantém o texto e mostra os @ de todos', r.texto.startsWith('📢 🔔 Começa às 18h30!') && r.texto.includes('@111') && r.texto.includes('@222'), r);
+    conferir('!todos mantém o texto e mostra só @all', r.texto === '📢 🔔 Começa às 18h30!\n\n@all' && !r.texto.includes('@111'), r);
+    conferir('!todos pede o @all nativo', r.respostas[0]?.extra?.nonJidMentions === 1, r);
+
+    // Se o WhatsApp Web recusar o campo do @all, reenvia sem ele
+    falharComExtra = true;
+    r = await enviar(G1, ADM, '!todos Plano B');
+    falharComExtra = false;
+    conferir('!todos funciona mesmo se o @all nativo for recusado', r.respostas.length === 1 && r.respostas[0].mencoes.length === 2 && !r.respostas[0].extra, r);
 
     await testarModoTeste();
 
