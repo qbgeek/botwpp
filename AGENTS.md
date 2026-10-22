@@ -22,7 +22,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele resume o que o bot faz,
 - **O que o bot faz:** gerencia listas de inscrição de campeonatos (Pokémon, Yu-Gi-Oh!, Magic etc.) em grupos de WhatsApp. O ADM cria listas com nome livre (`!lista #ygo …`) e cada nome vira o comando de inscrição (`!ygo Nome`), válido em **todos os grupos** do bot. Há fila de espera, marcação de pago (🆗), meta de premiação e avisos.
 - **Repositório:** `https://github.com/qbgeek/botwpp`
   - `master`: versão nova (todo o trabalho descrito aqui).
-  - `projeto-legado`: versão antiga (commit `e54d45c`), a que ainda roda no computador do cliente até a instalação da Parte 2 do README.
+  - `projeto-legado`: versão antiga (commit `e54d45c`). A pasta do bot antigo continua no computador do cliente como plano de volta.
   - `feat/multi-eventos`: branch onde o trabalho foi feito; mantida como histórico.
 
 ## 3. Stack
@@ -135,17 +135,22 @@ O teste roda numa cópia temporária, então não toca nos dados do projeto. Ao 
 
 ## 7. Estado atual e próximos passos
 
-**Pronto na `master`:** tudo da seção 5, mais as correções listadas em `ALTERACOES.md` (seção 2, itens 1 a 25).
+**Pronto na `master`:** tudo da seção 5, mais as correções listadas em `ALTERACOES.md` (seção 2, itens 1 a 27).
+
+**Em produção (21/10/2026):**
+- O bot novo roda no computador do cliente, em `C:\Users\loja\Desktop\BOT QBGEEK v2\botwpp`, clonado da `master`, já com listas criadas pelo cliente.
+- A pasta do bot antigo continua no PC, intocada.
+- Atualizações chegam por `git pull origin master` (rotina em `STACK.md`).
+
+**Documentação:**
+- `README.md`: só comandos (para o cliente).
+- `STACK.md`: parte técnica (stack, instalação, teste, atualização, backup).
+- `ALTERACOES.md`: histórico.
 
 **Falta fazer:**
-1. O cliente valida localmente (README, Parte 1).
-2. Instalação na máquina do cliente (README, Parte 2):
-   - clonar a `master` numa **pasta nova**, sem mexer na pasta do bot antigo;
-   - copiar `dados_campeonato.json` e `config.json` da pasta antiga;
-   - parar o bot antigo, iniciar o novo e escanear o QR;
-   - `!importarlegado #nome` e criar as demais listas.
-3. Avisar os jogadores da troca de comandos (`!participar` → `!nomedalista`).
-4. Acompanhar atualizações do `whatsapp-web.js`. Ao atualizar, rode `npm test` e verifique se `msg.getChat()` voltou a funcionar (seção 8).
+1. Confirmar com o Rafael se a lista antiga já foi importada (`!importarlegado #nome`).
+2. Conferir no WhatsApp real se o `@all` nativo do `!todos` aparece destacado (seção 8).
+3. Acompanhar atualizações do `whatsapp-web.js`. Ao atualizar, rode `npm test` e verifique se `msg.getChat()` voltou a funcionar (seção 8).
 
 ## 8. Problemas conhecidos e armadilhas
 
@@ -182,4 +187,5 @@ O teste roda numa cópia temporária, então não toca nos dados do projeto. Ao 
 | `17283df` | 20/10/2026 | Contorno do `getChat()` quebrado |
 | `9f0e1ee` | 20/10/2026 | `npm test`, `AGENTS.md`, README para o cliente |
 | `50ffd69` | 21/10/2026 | Listas globais (valem em qualquer grupo), ADM pelo privado, instalação em pasta nova |
-| (este) | 21/10/2026 | `!todos` com @all, título "CYBERNEMAR 100% QB" no menu, aviso de timer em reconexões |
+| `64543c1`, `e5c1ffb` | 21/10/2026 | `!todos` com @all, título "CYBERNEMAR 100% QB" no menu, aviso de timer em reconexões |
+| (este) | 21/10/2026 | README só com comandos; parte técnica em `STACK.md` |

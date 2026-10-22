@@ -2,7 +2,10 @@
 
 Este documento lista tudo o que foi corrigido, alterado e adicionado no bot da QB Geek. O trabalho foi feito na branch `feat/multi-eventos` e depois levado para a `master`. A versão antiga está guardada na branch `projeto-legado`.
 
-O passo a passo de teste e instalação está no [README.md](README.md).
+Onde está cada assunto:
+- **Comandos do bot:** [README.md](README.md).
+- **Stack, instalação, testes, atualização e backup:** [STACK.md](STACK.md).
+- **Contexto para desenvolvedores:** [AGENTS.md](AGENTS.md).
 
 ## Resumo
 
@@ -11,7 +14,9 @@ O passo a passo de teste e instalação está no [README.md](README.md).
 3. **Criação em um comando só**: `!lista #ygo 30/10/2026 18h30 24 12 R$ 20,00`.
 4. **Lista atualizada a cada inscrição**, mostrando só até o último nome. O `!lista` de consulta deixou de ser público.
 5. **`!pago 14`** coloca o 🆗 ao lado do nome. Vaga paga ou adicionada pelo ADM não sai sozinha.
-6. **Menu `!neymar`** (ou `!ajudaney`), dividido entre jogadores e ADM, sem `!id` e sem os comandos das listas.
+6. **Menu `!neymar`** (ou `!ajudaney`), com o título "COMANDOS CYBERNEMAR 100% QB", dividido entre jogadores e ADM, sem `!id` e sem os comandos das listas.
+7. **`!todos`** marca todos do grupo com um único `@all` (só ADM).
+8. **Documentação reorganizada**: o README tem só os comandos, e a parte técnica foi para o STACK.md.
 
 ---
 
@@ -289,7 +294,7 @@ Use `e1`, `e2`… para posições da fila de espera.
 
 ## 8. Como instalar no computador do cliente
 
-O passo a passo completo está no [README.md](README.md), na **Parte 2**. Em resumo:
+O passo a passo completo está no [STACK.md](STACK.md), em **Instalação definitiva**. Em resumo:
 
 1. Clonar a `master` numa **pasta nova**. A pasta do bot antigo não é alterada e serve para voltar atrás.
 2. **Copiar** da pasta antiga para a nova os arquivos `dados_campeonato.json` (lista atual) e `config.json` (ADMs).
@@ -319,7 +324,9 @@ O passo a passo completo está no [README.md](README.md), na **Parte 2**. Em res
 | [utils/arquivoJson.js](utils/arquivoJson.js) | Leitura com backup e gravação segura |
 | [utils/modoTeste.js](utils/modoTeste.js) | Modo teste: com `BOT_SOMENTE_GRUPO` definida, responde só nos grupos com esse nome |
 | [utils/whatsapp.js](utils/whatsapp.js) | Lê nome e participantes do grupo sem o `getChat()` da biblioteca, que está quebrado |
-| `README.md`, `ALTERACOES.md` | Documentação (o README tem o passo a passo de teste local e instalação para o cliente) |
+| `README.md` | Referência de comandos para o cliente (jogadores e ADM) |
+| `STACK.md` | Stack, onde ficam os dados, instalação, teste local, modo teste, atualização, backup, pm2 e problemas comuns |
+| `ALTERACOES.md` | Este documento |
 | `AGENTS.md` | Contexto completo para próximos agentes de IA / desenvolvedores |
 | [teste/simular.js](teste/simular.js) | Testes automáticos sem WhatsApp (`npm test`, 48 verificações) |
 
@@ -361,5 +368,6 @@ O passo a passo completo está no [README.md](README.md), na **Parte 2**. Em res
 - **Alertas restantes do `npm audit`** (`basic-ftp`, `extract-zip` e dependentes): estão no `@puppeteer/browsers`, usado só para baixar o Chrome. Não são alcançáveis por mensagens do WhatsApp. A correção automática (`--force`) rebaixaria o whatsapp-web.js para 1.34.2, por isso não foi aplicada.
 - **Testes já feitos:**
   - 20/10/2026: o desenvolvedor testou no WhatsApp real (modo teste), com tudo aprovado.
-  - 21/10/2026: a mudança para listas globais foi validada só com os testes automáticos (`npm test`).
-  - Faça o teste da Parte 1 do README antes de liberar.
+  - 21/10/2026: a mudança para listas globais foi validada só com os testes automáticos (`npm test`). Depois, o bot novo entrou em produção no computador do cliente.
+  - 21/10/2026: o `!todos` com `@all` e o novo título do menu foram validados só com `npm test`. **O `@all` nativo ainda precisa ser conferido no WhatsApp real.** Se o WhatsApp não o reconhecer, aparece "@all" como texto comum, mas todos continuam notificados.
+- **Antes de liberar mudanças futuras:** faça o teste local do [STACK.md](STACK.md).
